@@ -12,7 +12,19 @@
 #import "FLEXMetadataExtras.h"
 #import <objc/runtime.h>
 
+static FLEXSwiftUIDescriptionVerbosity _descriptionVerbosity = FLEXSwiftUIDescriptionVerbosityNormal;
+
 @implementation FLEXSwiftUISupport
+
+#pragma mark - Configuration
+
++ (void)setDescriptionVerbosity:(FLEXSwiftUIDescriptionVerbosity)verbosity {
+    _descriptionVerbosity = verbosity;
+}
+
++ (FLEXSwiftUIDescriptionVerbosity)descriptionVerbosity {
+    return _descriptionVerbosity;
+}
 
 #pragma mark - SwiftUI Detection
 
@@ -97,11 +109,272 @@
     NSString *className = NSStringFromClass([view class]);
     NSString *readableName = [self readableNameForSwiftUIType:className];
     
+    // Check verbosity level and adjust description accordingly
+    FLEXSwiftUIDescriptionVerbosity verbosity = [self descriptionVerbosity];
+    
+    NSMutableString *description = [NSMutableString string];
+    
+    // Add readable name or class name
     if (readableName) {
-        return [NSString stringWithFormat:@"%@ (%@)", readableName, className];
+        [description appendString:readableName];
+    } else {
+        [description appendString:className];
     }
     
-    return className;
+    // Add view-specific information based on verbosity level
+    if (verbosity >= FLEXSwiftUIDescriptionVerbosityNormal) {
+        NSString *viewInfo = [self extractViewSpecificInfo:view];
+        if (viewInfo) {
+            [description appendFormat:@" %@", viewInfo];
+        }
+    }
+    
+    // Add memory address for debugging (only in detailed mode)
+    if (verbosity >= FLEXSwiftUIDescriptionVerbosityDetailed) {
+        [description appendFormat:@" <%p>", view];
+    }
+    
+    return description.copy;
+}
+
++ (nullable NSString *)extractViewSpecificInfo:(id)view {
+    if (!view) return nil;
+    
+    NSString *className = NSStringFromClass([view class]);
+    NSMutableArray<NSString *> *infoComponents = [NSMutableArray array];
+    
+    // Extract content for Text views
+    if ([className containsString:@"Text"]) {
+        NSString *textContent = [self extractTextContent:view];
+        if (textContent) {
+            [infoComponents addObject:[NSString stringWithFormat:@"text: \"%@\"", textContent]];
+        }
+    }
+    
+    // Extract content for Image views
+    if ([className containsString:@"Image"]) {
+        NSString *imageInfo = [self extractImageInfo:view];
+        if (imageInfo) {
+            [infoComponents addObject:imageInfo];
+        }
+    }
+    
+    // Extract layout information for Stack views
+    if ([className containsString:@"Stack"]) {
+        NSString *stackInfo = [self extractStackInfo:view];
+        if (stackInfo) {
+            [infoComponents addObject:stackInfo];
+        }
+    }
+    
+    // Extract modifier information for ModifiedContent
+    if ([className containsString:@"ModifiedContent"]) {
+        NSString *modifierInfo = [self extractModifierInfo:view];
+        if (modifierInfo) {
+            [infoComponents addObject:modifierInfo];
+        }
+    }
+    
+    // Extract button action information
+    if ([className containsString:@"Button"]) {
+        NSString *buttonInfo = [self extractButtonInfo:view];
+        if (buttonInfo) {
+            [infoComponents addObject:buttonInfo];
+        }
+    }
+    
+    // Extract list/collection information
+    if ([className containsString:@"List"] || [className containsString:@"ForEach"]) {
+        NSString *collectionInfo = [self extractCollectionInfo:view];
+        if (collectionInfo) {
+            [infoComponents addObject:collectionInfo];
+        }
+    }
+    
+    // Extract state information
+    NSString *stateInfo = [self extractStateInfo:view];
+    if (stateInfo) {
+        [infoComponents addObject:stateInfo];
+    }
+    
+    if (infoComponents.count > 0) {
+        return [NSString stringWithFormat:@"(%@)", [infoComponents componentsJoinedByString:@", "]];
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)extractTextContent:(id)view {
+    // Try to extract text content from various possible properties
+    NSArray<NSString *> *textProperties = @[@"content", @"text", @"string", @"verbatim", @"storage"];
+    
+    for (NSString *property in textProperties) {
+        if ([view respondsToSelector:NSSelectorFromString(property)]) {
+            @try {
+                id value = [view performSelector:NSSelectorFromString(property)];
+                if ([value isKindOfClass:[NSString class]]) {
+                    // Truncate long text for readability
+                    NSString *text = (NSString *)value;
+                    if (text.length > 50) {
+                        text = [[text substringToIndex:47] stringByAppendingString:@"..."];
+                    }
+                    return text;
+                }
+            } @catch (NSException *exception) {
+                // Continue to next property
+            }
+        }
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)extractImageInfo:(id)view {
+    NSArray<NSString *> *imageProperties = @[@"name", @"systemName", @"resource", @"provider"];
+    
+    for (NSString *property in imageProperties) {
+        if ([view respondsToSelector:NSSelectorFromString(property)]) {
+            @try {
+                id value = [view performSelector:NSSelectorFromString(property)];
+                if ([value isKindOfClass:[NSString class]]) {
+                    return [NSString stringWithFormat:@"image: %@", value];
+                }
+            } @catch (NSException *exception) {
+                // Continue to next property
+            }
+        }
+    }
+    
+    return @"image";
+}
+
++ (nullable NSString *)extractStackInfo:(id)view {
+    NSMutableArray<NSString *> *stackInfo = [NSMutableArray array];
+    
+    // Extract alignment
+    if ([view respondsToSelector:@selector(alignment)]) {
+        @try {
+            id alignment = [view performSelector:@selector(alignment)];
+            if (alignment) {
+                [stackInfo addObject:[NSString stringWithFormat:@"alignment: %@", alignment]];
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    // Extract spacing
+    if ([view respondsToSelector:@selector(spacing)]) {
+        @try {
+            id spacing = [view performSelector:@selector(spacing)];
+            if (spacing) {
+                [stackInfo addObject:[NSString stringWithFormat:@"spacing: %@", spacing]];
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    // Extract content count
+    if ([view respondsToSelector:@selector(content)]) {
+        @try {
+            id content = [view performSelector:@selector(content)];
+            if (content) {
+                [stackInfo addObject:@"has content"];
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    return stackInfo.count > 0 ? [stackInfo componentsJoinedByString:@", "] : nil;
+}
+
++ (nullable NSString *)extractModifierInfo:(id)view {
+    // Extract modifier information
+    if ([view respondsToSelector:@selector(modifier)]) {
+        @try {
+            id modifier = [view performSelector:@selector(modifier)];
+            if (modifier) {
+                NSString *modifierClass = NSStringFromClass([modifier class]);
+                NSString *readableModifier = [self readableNameForSwiftUIType:modifierClass];
+                if (readableModifier) {
+                    return [NSString stringWithFormat:@"modifier: %@", readableModifier];
+                }
+                return [NSString stringWithFormat:@"modifier: %@", modifierClass];
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)extractButtonInfo:(id)view {
+    // Extract button label if available
+    if ([view respondsToSelector:@selector(label)]) {
+        @try {
+            id label = [view performSelector:@selector(label)];
+            if (label) {
+                NSString *labelDescription = [self enhancedDescriptionForSwiftUIView:label];
+                if (labelDescription) {
+                    return [NSString stringWithFormat:@"label: %@", labelDescription];
+                }
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    // Check for action
+    if ([view respondsToSelector:@selector(action)]) {
+        @try {
+            id action = [view performSelector:@selector(action)];
+            if (action) {
+                return @"has action";
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)extractCollectionInfo:(id)view {
+    // Extract data source information
+    if ([view respondsToSelector:@selector(data)]) {
+        @try {
+            id data = [view performSelector:@selector(data)];
+            if ([data respondsToSelector:@selector(count)]) {
+                NSNumber *count = [data performSelector:@selector(count)];
+                if (count) {
+                    return [NSString stringWithFormat:@"items: %@", count];
+                }
+            }
+        } @catch (NSException *exception) {}
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)extractStateInfo:(id)view {
+    // This is a basic implementation - in a real scenario, you might want to
+    // use more sophisticated reflection to extract @State, @Binding, etc.
+    
+    NSMutableArray<NSString *> *stateInfo = [NSMutableArray array];
+    
+    // Use runtime introspection to find potential state properties
+    unsigned int ivarCount = 0;
+    Ivar *ivars = class_copyIvarList([view class], &ivarCount);
+    
+    for (unsigned int i = 0; i < ivarCount; i++) {
+        const char *ivarName = ivar_getName(ivars[i]);
+        if (ivarName) {
+            NSString *name = [NSString stringWithUTF8String:ivarName];
+            // Look for common SwiftUI state patterns
+            if ([name containsString:@"state"] || [name containsString:@"binding"] || [name containsString:@"observed"]) {
+                [stateInfo addObject:name];
+            }
+        }
+    }
+    
+    free(ivars);
+    
+    if (stateInfo.count > 0) {
+        return [NSString stringWithFormat:@"state: %@", [stateInfo componentsJoinedByString:@", "]];
+    }
+    
+    return nil;
 }
 
 + (nullable NSString *)readableNameForSwiftUIType:(NSString *)typeName {

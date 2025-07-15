@@ -212,15 +212,56 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
             return enhancedDescription;
         }
         
-        // Fallback to readable type name
+        // Better fallback to readable type name with memory address
         NSString *typeName = NSStringFromClass([value class]);
         NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:typeName];
         if (readableName) {
-            return readableName;
+            return [NSString stringWithFormat:@"%@ <%p>", readableName, value];
         }
+        
+        // Last resort: clean up the class name and add memory address
+        NSString *cleanedTypeName = [self cleanSwiftUITypeName:typeName];
+        return [NSString stringWithFormat:@"%@ <%p>", cleanedTypeName, value];
     }
     
     return nil;
+}
+
++ (NSString *)cleanSwiftUITypeName:(NSString *)typeName {
+    // Remove common SwiftUI namespace prefixes and make more readable
+    NSString *cleaned = typeName;
+    
+    // Remove SwiftUI namespace prefix
+    if ([cleaned hasPrefix:@"SwiftUI."]) {
+        cleaned = [cleaned substringFromIndex:8];
+    }
+    
+    // Remove common internal prefixes
+    NSArray<NSString *> *prefixesToRemove = @[@"_", @"__", @"TGC:", @"IP33_"];
+    for (NSString *prefix in prefixesToRemove) {
+        if ([cleaned hasPrefix:prefix]) {
+            cleaned = [cleaned substringFromIndex:prefix.length];
+        }
+    }
+    
+    // Remove complex generics and internal identifiers
+    NSRange angleRange = [cleaned rangeOfString:@"<"];
+    if (angleRange.location != NSNotFound) {
+        cleaned = [cleaned substringToIndex:angleRange.location];
+    }
+    
+    // Remove internal identifiers with numbers/hashes
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"[A-F0-9]{8,}" options:0 error:nil];
+    if (regex) {
+        cleaned = [regex stringByReplacingMatchesInString:cleaned options:0 range:NSMakeRange(0, cleaned.length) withTemplate:@""];
+    }
+    
+    // If the cleaned name is too short or empty, use a generic name
+    if (cleaned.length < 3) {
+        cleaned = @"SwiftUIView";
+    }
+    
+    return cleaned;
 }
 
 + (BOOL)safeObject:(id)object isKindOfClass:(Class)cls {
@@ -896,6 +937,11 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
         return nil;
     }
     
+    Class swiftUISupport = NSClassFromString(@"FLEXSwiftUISupport");
+    if (!swiftUISupport) {
+        return nil;
+    }
+    
     // Check if this is a SwiftUI type encoding
     if ([encodingString containsString:@"SwiftUI"]) {
         // Extract the type name from the encoding
@@ -922,8 +968,8 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
             }
         }
         
-        if (typeName) {
-            NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:typeName];
+        if (typeName && [swiftUISupport respondsToSelector:@selector(readableNameForSwiftUIType:)]) {
+            NSString *readableName = [swiftUISupport readableNameForSwiftUIType:typeName];
             if (readableName) {
                 return readableName;
             }
@@ -941,19 +987,21 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
             NSString *genericParams = [encodingString substringWithRange:NSMakeRange(startRange.location + 1, endRange.location - startRange.location - 1)];
             
             // Check if base type is SwiftUI
-            NSString *readableBase = [FLEXSwiftUISupport readableNameForSwiftUIType:baseType];
-            if (readableBase) {
-                // Try to make generic parameters readable too
-                NSArray<NSString *> *params = [genericParams componentsSeparatedByString:@","];
-                NSMutableArray<NSString *> *readableParams = [NSMutableArray array];
-                
-                for (NSString *param in params) {
-                    NSString *trimmedParam = [param stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-                    NSString *readableParam = [FLEXSwiftUISupport readableNameForSwiftUIType:trimmedParam];
-                    [readableParams addObject:readableParam ?: trimmedParam];
+            if ([swiftUISupport respondsToSelector:@selector(readableNameForSwiftUIType:)]) {
+                NSString *readableBase = [swiftUISupport readableNameForSwiftUIType:baseType];
+                if (readableBase) {
+                    // Try to make generic parameters readable too
+                    NSArray<NSString *> *params = [genericParams componentsSeparatedByString:@","];
+                    NSMutableArray<NSString *> *readableParams = [NSMutableArray array];
+                    
+                    for (NSString *param in params) {
+                        NSString *trimmedParam = [param stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                        NSString *readableParam = [swiftUISupport readableNameForSwiftUIType:trimmedParam];
+                        [readableParams addObject:readableParam ?: trimmedParam];
+                    }
+                    
+                    return [NSString stringWithFormat:@"%@<%@>", readableBase, [readableParams componentsJoinedByString:@", "]];
                 }
-                
-                return [NSString stringWithFormat:@"%@<%@>", readableBase, [readableParams componentsJoinedByString:@", "]];
             }
         }
     }

@@ -10,12 +10,11 @@
 #import "FLEXample-Swift.h"
 #import "Person.h"
 #import <FLEX.h>
-#import <SwiftUI/SwiftUI.h>
 
 @interface CommitListViewController ()
 @property (nonatomic) FLEXMutableListSection<Commit *> *commits;
 @property (nonatomic, readonly) NSMutableDictionary<NSString *, UIImage *> *avatars;
-@property (nonatomic, strong) UIHostingController *swiftUIHostingController;
+@property (nonatomic, strong) UIViewController *swiftUIHostingController;
 @end
 
 @interface UIAlertController (Private)
@@ -43,7 +42,7 @@
 @implementation ComplexSwiftUIView
 
 + (UIViewController *)createComplexSwiftUIViewController {
-    if (@available(iOS 13.0, *)) {
+    if (@available(iOS 15.0, *)) {
         // Use the Swift bridge to create the complex SwiftUI view
         return [ComplexSwiftUIViewBridge createHostingController];
     }
@@ -81,7 +80,7 @@
     UIViewController *complexSwiftUIVC = [ComplexSwiftUIView createComplexSwiftUIViewController];
     
     // Store reference to avoid deallocation
-    self.swiftUIHostingController = (UIHostingController *)complexSwiftUIVC;
+    self.swiftUIHostingController = complexSwiftUIVC;
     
     alert.contentViewController = complexSwiftUIVC;
     [self presentViewController:alert animated:YES completion:nil];
@@ -231,7 +230,7 @@
     ];
     
     // Store reference
-    self.swiftUIHostingController = (UIHostingController *)complexSwiftUIVC;
+    self.swiftUIHostingController = complexSwiftUIVC;
     
     [self presentViewController:nav animated:YES completion:nil];
 }

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A9D70EC640E633FE829EF695 /* libPods-FLEXample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BBD699DDBAC5A16D8CFD39AC /* libPods-FLEXample.a */; };
+		B9A1B9B62E264AC5005829B0 /* ComplexSwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A1B9B52E264AC5005829B0 /* ComplexSwiftUIView.swift */; };
 		C376F92B28DBE503004E88BA /* dogs.realm in Resources */ = {isa = PBXBuildFile; fileRef = C386D706241AA66100699085 /* dogs.realm */; };
 		C386D6D02419975A00699085 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C386D6CF2419975A00699085 /* AppDelegate.swift */; };
 		C386D6D22419975A00699085 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C386D6D12419975A00699085 /* SceneDelegate.swift */; };
@@ -30,6 +31,7 @@
 
 /* Begin PBXFileReference section */
 		92E1E1EECA3F2533E1B8BF35 /* Pods-FLEXample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FLEXample.debug.xcconfig"; path = "Target Support Files/Pods-FLEXample/Pods-FLEXample.debug.xcconfig"; sourceTree = "<group>"; };
+		B9A1B9B52E264AC5005829B0 /* ComplexSwiftUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplexSwiftUIView.swift; sourceTree = "<group>"; };
 		BBD699DDBAC5A16D8CFD39AC /* libPods-FLEXample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FLEXample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE1780244AEC542DDB894B08 /* Pods-FLEXample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FLEXample.release.xcconfig"; path = "Target Support Files/Pods-FLEXample/Pods-FLEXample.release.xcconfig"; sourceTree = "<group>"; };
 		C386D6CC2419975A00699085 /* FLEXample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FLEXample.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,6 +96,7 @@
 		C386D6CE2419975A00699085 /* FLEXample */ = {
 			isa = PBXGroup;
 			children = (
+				B9A1B9B52E264AC5005829B0 /* ComplexSwiftUIView.swift */,
 				C386D6E72419985E00699085 /* Supporting Files */,
 				C386D6CF2419975A00699085 /* AppDelegate.swift */,
 				C386D6D12419975A00699085 /* SceneDelegate.swift */,
@@ -287,6 +290,7 @@
 				C3A67858241ADDF7005A4681 /* Commit.swift in Sources */,
 				C386D6D02419975A00699085 /* AppDelegate.swift in Sources */,
 				C3B3760025B8CDA300AD43AB /* Person.m in Sources */,
+				B9A1B9B62E264AC5005829B0 /* ComplexSwiftUIView.swift in Sources */,
 				C386D6E62419984700699085 /* CommitListViewController.m in Sources */,
 				C386D70B241AA67800699085 /* Dog.m in Sources */,
 				C3A67856241AB8AD005A4681 /* MiscNetworkRequests.m in Sources */,
