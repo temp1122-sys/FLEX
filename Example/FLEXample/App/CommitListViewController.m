@@ -10,10 +10,12 @@
 #import "FLEXample-Swift.h"
 #import "Person.h"
 #import <FLEX.h>
+#import <SwiftUI/SwiftUI.h>
 
 @interface CommitListViewController ()
 @property (nonatomic) FLEXMutableListSection<Commit *> *commits;
 @property (nonatomic, readonly) NSMutableDictionary<NSString *, UIImage *> *avatars;
+@property (nonatomic, strong) UIHostingController *swiftUIHostingController;
 @end
 
 @interface UIAlertController (Private)
@@ -34,6 +36,35 @@
 
 @end
 
+@interface ComplexSwiftUIView : NSObject
++ (UIViewController *)createComplexSwiftUIViewController;
+@end
+
+@implementation ComplexSwiftUIView
+
++ (UIViewController *)createComplexSwiftUIViewController {
+    if (@available(iOS 13.0, *)) {
+        // Use the Swift bridge to create the complex SwiftUI view
+        return [ComplexSwiftUIViewBridge createHostingController];
+    }
+    
+    // Fallback for older iOS versions
+    UIViewController *fallback = [[UIViewController alloc] init];
+    fallback.view.backgroundColor = [UIColor systemBackgroundColor];
+    UILabel *label = [[UILabel alloc] init];
+    label.text = @"SwiftUI requires iOS 13+";
+    label.textAlignment = NSTextAlignmentCenter;
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    [fallback.view addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [label.centerXAnchor constraintEqualToAnchor:fallback.view.centerXAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:fallback.view.centerYAnchor]
+    ]];
+    return fallback;
+}
+
+@end
+
 @implementation CommitListViewController
 
 - (id)init {
@@ -43,11 +74,16 @@
 
 - (void)showCustomView {
     UIAlertController *alert = [FLEXAlert makeAlert:^(FLEXAlert *make) {
-        make.title(@"Custom View").button(@"Dismiss").cancelStyle();
+        make.title(@"Complex SwiftUI View").button(@"Dismiss").cancelStyle();
     }];
     
-    // I like to use this to easily display and interact with custom views I'm working on
-    alert.contentViewController = [ContentViewController customView:[UIView new]];
+    // Create a complex SwiftUI view for FLEX hierarchy testing
+    UIViewController *complexSwiftUIVC = [ComplexSwiftUIView createComplexSwiftUIViewController];
+    
+    // Store reference to avoid deallocation
+    self.swiftUIHostingController = (UIHostingController *)complexSwiftUIVC;
+    
+    alert.contentViewController = complexSwiftUIVC;
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -64,8 +100,15 @@
     self.navigationItem.rightBarButtonItem.accessibilityIdentifier = @"toggle-explorer";
     
     self.navigationItem.leftBarButtonItem = [UIBarButtonItem
-        flex_itemWithTitle:@"Test" target:self action:@selector(showCustomView)
+        flex_itemWithTitle:@"SwiftUI" target:self action:@selector(showCustomView)
     ];
+    
+    // Add a second button for presenting SwiftUI view as full screen
+    UIBarButtonItem *flexItem = self.navigationItem.rightBarButtonItem;
+    UIBarButtonItem *swiftUITestItem = [UIBarButtonItem
+        flex_itemWithTitle:@"Test SwiftUI" target:self action:@selector(presentComplexSwiftUIView)
+    ];
+    self.navigationItem.rightBarButtonItems = @[flexItem, swiftUITestItem];
     
     // Load and process commits
     NSString *commitsURL = @"https://api.github.com/repos/Flipboard/FLEX/commits";
@@ -92,6 +135,11 @@
             ]];
         } completion:nil];
     } description:@"Present an object explorer for debugging"];
+    
+    // Register 's' for SwiftUI testing
+    [flex registerSimulatorShortcutWithKey:@"s" modifiers:0 action:^{
+        [self presentComplexSwiftUIView];
+    } description:@"Present complex SwiftUI view for hierarchy testing"];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -168,6 +216,28 @@
             completionHandler(data, code, error);
         });
     }] resume];
+}
+
+- (void)presentComplexSwiftUIView {
+    UIViewController *complexSwiftUIVC = [ComplexSwiftUIView createComplexSwiftUIViewController];
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:complexSwiftUIVC];
+    
+    // Add close button
+    complexSwiftUIVC.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] 
+        initWithTitle:@"Close" 
+        style:UIBarButtonItemStylePlain 
+        target:self 
+        action:@selector(dismissComplexSwiftUIView)
+    ];
+    
+    // Store reference
+    self.swiftUIHostingController = (UIHostingController *)complexSwiftUIVC;
+    
+    [self presentViewController:nav animated:YES completion:nil];
+}
+
+- (void)dismissComplexSwiftUIView {
+    [self dismissViewControllerAnimated:YES completion:nil];
 }
 
 @end

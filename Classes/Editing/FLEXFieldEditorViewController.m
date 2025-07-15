@@ -15,6 +15,7 @@
 #import "FLEXUtility.h"
 #import "FLEXColor.h"
 #import "UIBarButtonItem+FLEX.h"
+#import "FLEXSwiftUISupport.h"
 
 @interface FLEXFieldEditorViewController () <FLEXArgumentInputViewDelegate>
 
@@ -134,6 +135,19 @@
     
     for (NSString *type in labels) {
         [FLEXArgumentInputViewFactory registerFieldNames:labels[type] forTypeEncoding:type];
+    }
+    
+    // Register SwiftUI field information
+    [self registerSwiftUIFieldInfo];
+}
+
+- (void)registerSwiftUIFieldInfo {
+    // Register SwiftUI field information
+    NSDictionary<NSString *, NSArray<NSString *> *> *swiftUIFields = [FLEXSwiftUISupport auxiliaryFieldInfoForSwiftUITypes];
+    
+    for (NSString *typeName in swiftUIFields) {
+        NSArray<NSString *> *fieldNames = swiftUIFields[typeName];
+        [FLEXArgumentInputViewFactory registerFieldNames:fieldNames forTypeEncoding:typeName];
     }
 }
 

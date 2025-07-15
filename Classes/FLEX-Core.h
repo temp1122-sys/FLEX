@@ -20,3 +20,8 @@
 #import "FLEXMultilineTableViewCell.h"
 #import "FLEXKeyValueTableViewCell.h"
 
+// SwiftUI Support
+#import "FLEXSwiftUISupport.h"
+#import "FLEXSwiftUIMirror.h"
+#import "FLEXSwiftUIRuntimeUtility.h"
+

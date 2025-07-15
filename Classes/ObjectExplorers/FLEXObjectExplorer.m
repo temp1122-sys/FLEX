@@ -17,6 +17,7 @@
 #import "NSUserDefaults+FLEX.h"
 #import "FLEXMirror.h"
 #import "FLEXSwiftInternal.h"
+#import "FLEXSwiftUIMirror.h"
 
 @implementation FLEXObjectExplorerDefaults
 
@@ -74,6 +75,11 @@
 
 - (id<FLEXMirror>)mirrorForClass:(Class)cls {
     static Class FLEXSwiftMirror = nil;
+    
+    // Check if this is a SwiftUI view first
+    if ([FLEXSwiftUIMirror canReflect:cls]) {
+        return [[FLEXSwiftUIMirror alloc] initWithSubject:cls];
+    }
     
     // Should we use Reflex?
     if (FLEXIsSwiftObjectOrClass(cls) && FLEXObjectExplorer.reflexAvailable) {
