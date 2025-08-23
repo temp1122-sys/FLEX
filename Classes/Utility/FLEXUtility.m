@@ -96,14 +96,36 @@ BOOL FLEXConstructorsShouldRun(void) {
     UIViewController *viewController = [self viewControllerForView:view];
     if (viewController && [FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
         description = [description stringByAppendingString:@" [SwiftUI Host]"];
+        
+        // Log detailed SwiftUI information
+        NSString *className = NSStringFromClass([viewController class]);
         NSLog(@"SwiftUI Host Controller: %@", viewController);
+        NSLog(@"SwiftUI Host Controller Class: %@", className);
+        
+        // Try to demangle the class name
+        NSString *demangledName = [FLEXSwiftUISupport demangleSwiftUITypeName:className];
+        if (demangledName) {
+            NSLog(@"🎯 Demangled SwiftUI Type: %@", demangledName);
+        }
+        
+        // Try to extract the SwiftUI view type from the mangled class name
+        NSString *swiftUIViewType = [FLEXSwiftUISupport extractSwiftUIViewTypeFromMangledName:className];
+        if (swiftUIViewType) {
+            NSLog(@"Detected SwiftUI View Type: %@", swiftUIViewType);
+        }
+        
         // Get SwiftUI information from the hosting controller
         NSDictionary *swiftUIInfo = [FLEXSwiftUISupport swiftUIInfoFromHostingController:viewController];
+        NSLog(@"SwiftUI Info: %@", swiftUIInfo);
+        
         if (swiftUIInfo[@"rootViewType"]) {
             NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:swiftUIInfo[@"rootViewType"]];
             if (readableName) {
                 description = [description stringByAppendingFormat:@" → %@", readableName];
             }
+        } else if (swiftUIViewType) {
+            // Fallback to extracted type from mangled name
+            description = [description stringByAppendingFormat:@" → %@", swiftUIViewType];
         }
     }
     

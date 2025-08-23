@@ -192,6 +192,8 @@ typedef BOOL (^FLEXSwiftUIIsSwiftUIBackedViewBlock)(UIView *view);
  */
 + (void)registerSwiftBridge:(id)bridge;
 
++ (nullable NSString *)extractSwiftUIViewTypeFromMangledName:(NSString *)mangledClassName;
+
 @end
 
 NS_ASSUME_NONNULL_END 

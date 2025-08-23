@@ -3,4 +3,5 @@ platform :ios, '15.0'
 target 'FLEXample' do
   project 'FLEXample-Cocoapods'
   pod 'FLEX', :path => '../'
+  pod 'ViewInspector'
 end

@@ -1,18 +1,19 @@
 import SwiftUI
 import UIKit
 
+// MARK: - ComplexSwiftUIView
+
 // FLEX is available through the bridging header
 // No need to import FLEX or FLEXSwiftUI modules in CocoaPods setup
 
 // Enable enhanced SwiftUI debugging on app launch
-//private let _ = {
+// private let _ = {
 //    if #available(iOS 15.0, *) {
 //        // Enable the SwiftUI bridge for enhanced introspection
 //        FLEXSwiftUIBridge.enableSwiftUIDebugging()
 //    }
-//}()
+// }()
 
-// MARK: - Complex SwiftUI View for FLEX Testing
 @available(iOS 15.0, *)
 public struct ComplexSwiftUIView: View {
     @State private var counter: Int = 0
@@ -74,7 +75,7 @@ public struct ComplexSwiftUIView: View {
             .navigationTitle("Complex SwiftUI View")
             .navigationBarTitleDisplayMode(.large)
             .alert("Alert Triggered", isPresented: $showingAlert) {
-                Button("OK") { }
+                Button("OK") {}
             } message: {
                 Text("This is a test alert for FLEX hierarchy analysis")
             }
@@ -86,7 +87,8 @@ public struct ComplexSwiftUIView: View {
     }
 }
 
-// MARK: - Header Section
+// MARK: - HeaderSection
+
 @available(iOS 15.0, *)
 struct HeaderSection: View {
     @Binding var counter: Int
@@ -151,7 +153,8 @@ struct HeaderSection: View {
     }
 }
 
-// MARK: - Tab Section
+// MARK: - TabSection
+
 @available(iOS 15.0, *)
 struct TabSection: View {
     @Binding var selectedTab: Int
@@ -196,7 +199,8 @@ struct TabSection: View {
     }
 }
 
-// MARK: - Controls Section
+// MARK: - ControlsSection
+
 @available(iOS 15.0, *)
 struct ControlsSection: View {
     @Binding var sliderValue: Double
@@ -213,7 +217,7 @@ struct ControlsSection: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Slider Value: \(sliderValue, specifier: "%.2f")")
                     .accessibilityIdentifier("ControlsSection.sliderLabel")
-                Slider(value: $sliderValue, in: 0...1)
+                Slider(value: $sliderValue, in: 0 ... 1)
                     .tint(.blue)
                     .accessibilityIdentifier("ControlsSection.slider")
             }
@@ -260,7 +264,8 @@ struct ControlsSection: View {
     }
 }
 
-// MARK: - List Section
+// MARK: - ListSection
+
 @available(iOS 15.0, *)
 struct ListSection: View {
     let sampleData: [String]
@@ -314,7 +319,8 @@ struct ListSection: View {
     }
 }
 
-// MARK: - Geometric Shapes Section
+// MARK: - GeometricShapesSection
+
 @available(iOS 15.0, *)
 struct GeometricShapesSection: View {
     let sliderValue: Double
@@ -370,7 +376,8 @@ struct GeometricShapesSection: View {
     }
 }
 
-// MARK: - Interactive Cards Section
+// MARK: - InteractiveCardsSection
+
 @available(iOS 15.0, *)
 struct InteractiveCardsSection: View {
     @Binding var showingAlert: Bool
@@ -414,7 +421,8 @@ struct InteractiveCardsSection: View {
     }
 }
 
-// MARK: - Card View
+// MARK: - CardView
+
 @available(iOS 15.0, *)
 struct CardView: View {
     let title: String
@@ -449,7 +457,8 @@ struct CardView: View {
     }
 }
 
-// MARK: - Nested Views Section
+// MARK: - NestedViewsSection
+
 @available(iOS 15.0, *)
 struct NestedViewsSection: View {
     let counter: Int
@@ -515,7 +524,8 @@ struct NestedViewsSection: View {
     }
 }
 
-// MARK: - Sheet Content View
+// MARK: - SheetContentView
+
 @available(iOS 15.0, *)
 struct SheetContentView: View {
     @Environment(\.dismiss) private var dismiss
@@ -561,7 +571,8 @@ struct SheetContentView: View {
     }
 }
 
-// MARK: - Objective-C Bridge
+// MARK: - ComplexSwiftUIViewBridge
+
 @available(iOS 15.0, *)
 @objc public class ComplexSwiftUIViewBridge: NSObject {
     @objc public static func createHostingController() -> UIViewController {
@@ -575,4 +586,4 @@ extension ComplexSwiftUIView {
     public static func createViewController() -> UIViewController {
         return UIHostingController(rootView: ComplexSwiftUIView())
     }
-} 
+}

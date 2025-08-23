@@ -57,6 +57,13 @@ NS_ASSUME_NONNULL_BEGIN
 + (nullable NSString *)readableNameForSwiftUIType:(NSString *)typeName;
 
 /**
+ * Extracts SwiftUI view type from a mangled Swift class name.
+ * @param mangledClassName The mangled Swift class name
+ * @return The extracted SwiftUI view type name, or nil if extraction fails
+ */
++ (nullable NSString *)extractSwiftUIViewTypeFromMangledName:(NSString *)mangledClassName;
+
+/**
  * Provides auxiliary field information for SwiftUI types.
  * @return A dictionary mapping SwiftUI type names to arrays of relevant field names
  */
