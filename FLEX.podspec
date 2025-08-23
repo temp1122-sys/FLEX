@@ -28,10 +28,12 @@ Pod::Spec.new do |spec|
 
   spec.license          = { :type => "BSD", :file => "LICENSE" }
   spec.author           = { "Tanner Bennett" => "tannerbennett@me.com" }
-  spec.platform         = :ios, "9.0"
+  spec.platform         = :ios, "15.0"
+  spec.swift_versions   = ['5.5']
   spec.source           = { :git => "https://github.com/FLEXTool/FLEX.git", :tag => "#{spec.version}" }
-  spec.source_files     = "Classes/**/*.{h,c,m,mm}"
+  spec.source_files     = "Classes/**/*.{h,c,m,mm}", "Sources/FLEXSwiftUI/**/*.{swift}"
   spec.exclude_files    = "Classes/Headers/*.{h,c,m,mm}"
+  spec.dependency 'SwiftUIIntrospect', '~> 1.0'
   spec.frameworks       = [ "Foundation", "UIKit", "CoreGraphics", "ImageIO", "QuartzCore", "WebKit", "Security", "SceneKit" ]
   spec.libraries        = [ "z", "sqlite3" ]
   spec.requires_arc     = true

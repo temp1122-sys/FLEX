@@ -24,4 +24,8 @@
 #import "FLEXSwiftUISupport.h"
 #import "FLEXSwiftUIMirror.h"
 #import "FLEXSwiftUIRuntimeUtility.h"
+#import "FLEXSwiftMetadata.h"
+#import "FLEXSwiftNameDemangler.h"
+#import "FLEXSwiftTypeEncodingBridge.h"
+#import "FLEXSwiftUIObjectExplorer.h"
 

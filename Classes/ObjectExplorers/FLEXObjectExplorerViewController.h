@@ -33,6 +33,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)exploringObject:(id)objectOrClass
                  customSections:(nullable NSArray<FLEXTableViewSection *> *)customSections;
 
+/// Designated initializer
+- (id)initWithObject:(id)object
+            explorer:(FLEXObjectExplorer *)explorer
+      customSections:(NSArray<FLEXTableViewSection *> *)customSections;
+
 /// The object being explored, which may be an instance of a class or a class itself.
 @property (nonatomic, readonly) id object;
 /// This object provides the object's metadata for the explorer view controller.

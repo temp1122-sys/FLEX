@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.5
 
 import PackageDescription
 
@@ -8,18 +8,24 @@ enum FLEXBuildOptions {
 }
 
 #if swift(>=5.9)
-let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v12)]
+let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v15)]
 #elseif swift(>=5.7)
-let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v11)]
+let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v15)]
 #else
-let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v10)]
+let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v15)]
 #endif
 
 let package = Package(
     name: "FLEX",
     platforms: platforms,
     products: [
-        .library(name: "FLEX", targets: ["FLEX"])
+        .library(name: "FLEX", targets: ["FLEX", "FLEXSwiftUI"])
+    ],
+    dependencies: [
+        .package(
+            url: "https://github.com/siteline/swiftui-introspect",
+            from: "1.0.0"
+        )
     ],
     targets: [
         .target(
@@ -36,6 +42,17 @@ let package = Package(
             ],
             publicHeadersPath: "Headers",
             cSettings: .headerSearchPaths + .warningFlags
+        ),
+        .target(
+            name: "FLEXSwiftUI",
+            dependencies: [
+                "FLEX",
+                .product(name: "SwiftUIIntrospect", package: "swiftui-introspect")
+            ],
+            path: "Sources/FLEXSwiftUI",
+            swiftSettings: [
+                .define("FLEX_SWIFTUI_ENABLED")
+            ]
         )
     ],
     // Required to compile FLEXSwiftInternal.mm

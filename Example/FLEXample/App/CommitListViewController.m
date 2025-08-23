@@ -51,7 +51,7 @@
     UIViewController *fallback = [[UIViewController alloc] init];
     fallback.view.backgroundColor = [UIColor systemBackgroundColor];
     UILabel *label = [[UILabel alloc] init];
-    label.text = @"SwiftUI requires iOS 13+";
+    label.text = @"SwiftUI requires iOS 15+";
     label.textAlignment = NSTextAlignmentCenter;
     label.translatesAutoresizingMaskIntoConstraints = NO;
     [fallback.view addSubview:label];
@@ -149,22 +149,23 @@
 
 - (NSArray<FLEXTableViewSection *> *)makeSections {
     _commits = [FLEXMutableListSection list:@[]
-        cellConfiguration:^(__kindof UITableViewCell *cell, Commit *commit, NSInteger row) {
+        cellConfiguration:^(__kindof UITableViewCell *cell, id commit, NSInteger row) {
+            Commit *commitObj = (Commit *)commit;
             cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-            cell.textLabel.text = commit.firstLine;
-            cell.detailTextLabel.text = commit.secondLine;
+            cell.textLabel.text = commitObj.firstLine;
+            cell.detailTextLabel.text = commitObj.secondLine;
             cell.detailTextLabel.lineBreakMode = NSLineBreakByTruncatingTail;
 //            cell.textLabel.numberOfLines = 2;
 //            cell.detailTextLabel.numberOfLines = 3;
         
-            UIImage *avi = self.avatars[commit.committer.login];
+            UIImage *avi = self.avatars[commitObj.committer.login];
             if (avi) {
                 cell.imageView.image = avi;
             } else {
-                cell.tag = commit.identifier;
-                [self loadImage:commit.committer.avatarUrl completion:^(UIImage *image) {
-                    self.avatars[commit.committer.login] = image;
-                    if (cell.tag == commit.identifier) {
+                cell.tag = commitObj.identifier;
+                [self loadImage:commitObj.committer.avatarUrl completion:^(UIImage *image) {
+                    self.avatars[commitObj.committer.login] = image;
+                    if (cell.tag == commitObj.identifier) {
                         cell.imageView.image = image;
                     } else {
                         [self.tableView reloadRowsAtIndexPaths:@[
@@ -173,14 +174,16 @@
                     }
                 }];
             }
-        } filterMatcher:^BOOL(NSString *filterText, Commit *commit) {
-            return [commit matchesWithQuery:filterText];
+        } filterMatcher:^BOOL(NSString *filterText, id commit) {
+            Commit *commitObj = (Commit *)commit;
+            return [commitObj matchesWithQuery:filterText];
         }
     ];
     
-    self.commits.selectionHandler = ^(__kindof UIViewController *host, Commit *commit) {
+    self.commits.selectionHandler = ^(__kindof UIViewController *host, id commit) {
+        Commit *commitObj = (Commit *)commit;
         [host.navigationController pushViewController:[
-            FLEXObjectExplorerFactory explorerViewControllerForObject:commit
+            FLEXObjectExplorerFactory explorerViewControllerForObject:commitObj
         ] animated:YES];
     };
     

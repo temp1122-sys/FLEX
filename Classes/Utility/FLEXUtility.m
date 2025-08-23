@@ -10,6 +10,7 @@
 #import "FLEXUtility.h"
 #import "FLEXResources.h"
 #import "FLEXWindow.h"
+#import "FLEXSwiftUISupport.h"
 #import <ImageIO/ImageIO.h>
 #import <objc/runtime.h>
 #import <zlib.h>
@@ -91,8 +92,23 @@ BOOL FLEXConstructorsShouldRun(void) {
 + (NSString *)descriptionForView:(UIView *)view includingFrame:(BOOL)includeFrame {
     NSString *description = [[view class] description];
     
+    // Check if it's a SwiftUI hosting controller
+    UIViewController *viewController = [self viewControllerForView:view];
+    if (viewController && [FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
+        description = [description stringByAppendingString:@" [SwiftUI Host]"];
+        NSLog(@"SwiftUI Host Controller: %@", viewController);
+        // Get SwiftUI information from the hosting controller
+        NSDictionary *swiftUIInfo = [FLEXSwiftUISupport swiftUIInfoFromHostingController:viewController];
+        if (swiftUIInfo[@"rootViewType"]) {
+            NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:swiftUIInfo[@"rootViewType"]];
+            if (readableName) {
+                description = [description stringByAppendingFormat:@" → %@", readableName];
+            }
+        }
+    }
+    
     NSString *viewControllerDescription = [[[self viewControllerForView:view] class] description];
-    if (viewControllerDescription.length > 0) {
+    if (viewControllerDescription.length > 0 && ![FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
         description = [description stringByAppendingFormat:@" (%@)", viewControllerDescription];
     }
     
@@ -159,7 +175,18 @@ BOOL FLEXConstructorsShouldRun(void) {
 }
 
 + (NSString *)detailDescriptionForView:(UIView *)view {
-    return [NSString stringWithFormat:@"frame %@", [self stringForCGRect:view.frame]];
+    NSMutableString *details = [NSMutableString stringWithFormat:@"frame %@", [self stringForCGRect:view.frame]];
+    
+    // Add SwiftUI information if available
+    UIViewController *viewController = [self viewControllerForView:view];
+    if (viewController && [FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
+        NSDictionary *swiftUIInfo = [FLEXSwiftUISupport swiftUIInfoFromHostingController:viewController];
+        if (swiftUIInfo[@"rootViewDescription"]) {
+            [details appendFormat:@" • %@", swiftUIInfo[@"rootViewDescription"]];
+        }
+    }
+    
+    return details.copy;
 }
 
 + (UIImage *)circularImageWithColor:(UIColor *)color radius:(CGFloat)radius {

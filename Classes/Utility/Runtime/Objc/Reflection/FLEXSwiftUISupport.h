@@ -136,6 +136,20 @@ typedef NS_ENUM(NSUInteger, FLEXSwiftUIDescriptionVerbosity) {
 + (nullable NSString *)readableNameForSwiftUIType:(NSString *)typeName;
 
 /**
+ * Demangles SwiftUI-specific mangled type names.
+ * @param mangledName The mangled SwiftUI type name to demangle
+ * @return A readable name for the type, or nil if demangling fails
+ */
++ (nullable NSString *)demangleSwiftUITypeName:(NSString *)mangledName;
+
+/**
+ * Demangles general Swift mangled type names.
+ * @param mangledName The mangled Swift type name to demangle
+ * @return A readable name for the type, or nil if demangling fails
+ */
++ (nullable NSString *)demangleSwiftTypeName:(NSString *)mangledName;
+
+/**
  * Provides auxiliary field information for SwiftUI types.
  * @return A dictionary mapping SwiftUI type names to arrays of relevant field names
  */
@@ -149,6 +163,34 @@ typedef NS_ENUM(NSUInteger, FLEXSwiftUIDescriptionVerbosity) {
  * @return An array of dictionaries representing the view hierarchy, or nil if not a SwiftUI view
  */
 + (nullable NSArray<NSDictionary<NSString *, id> *> *)swiftUIViewHierarchyFromView:(id)view;
+
+#pragma mark - Swift Bridge Callbacks
+
+/**
+ * Callback types for Swift integration
+ */
+typedef NSString * _Nullable (^FLEXSwiftUIEnhancedDescriptionBlock)(id swiftUIView);
+typedef NSDictionary<NSString *, id> * _Nullable (^FLEXSwiftUIViewHierarchyBlock)(id swiftUIView);
+typedef NSArray<UIView *> * _Nullable (^FLEXSwiftUIDiscoverUIKitViewsBlock)(id swiftUIView);
+typedef BOOL (^FLEXSwiftUIIsSwiftUIBackedViewBlock)(UIView *view);
+
+/**
+ * Registers Swift bridge callbacks for enhanced SwiftUI support
+ * @param enhancedDescriptionBlock Block to get enhanced descriptions for SwiftUI views
+ * @param viewHierarchyBlock Block to extract view hierarchy from SwiftUI views
+ * @param discoverUIKitViewsBlock Block to discover UIKit views from SwiftUI views
+ * @param isSwiftUIBackedViewBlock Block to check if a UIView is SwiftUI-backed
+ */
++ (void)registerSwiftBridgeCallbacks:(nullable FLEXSwiftUIEnhancedDescriptionBlock)enhancedDescriptionBlock
+                   viewHierarchyBlock:(nullable FLEXSwiftUIViewHierarchyBlock)viewHierarchyBlock
+                discoverUIKitViewsBlock:(nullable FLEXSwiftUIDiscoverUIKitViewsBlock)discoverUIKitViewsBlock
+               isSwiftUIBackedViewBlock:(nullable FLEXSwiftUIIsSwiftUIBackedViewBlock)isSwiftUIBackedViewBlock;
+
+/**
+ * Simplified bridge registration method for Swift interop
+ * @param bridge The bridge object that implements the required methods
+ */
++ (void)registerSwiftBridge:(id)bridge;
 
 @end
 

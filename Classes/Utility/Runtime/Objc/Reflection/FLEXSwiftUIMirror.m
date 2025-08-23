@@ -9,6 +9,9 @@
 #import "FLEXSwiftUIMirror.h"
 #import "FLEXSwiftUISupport.h"
 #import "FLEXSwiftInternal.h"
+#import "FLEXSwiftMetadata.h"
+#import "FLEXSwiftNameDemangler.h"
+#import "FLEXSwiftTypeEncodingBridge.h"
 #import "FLEXProperty.h"
 #import "FLEXMethod.h"
 #import "FLEXIvar.h"
@@ -26,7 +29,8 @@
 #pragma mark - Factory Methods
 
 + (BOOL)canReflect:(id)objectOrClass {
-    return [FLEXSwiftUISupport isSwiftUIView:objectOrClass];
+    return [FLEXSwiftUISupport isSwiftUIView:objectOrClass] || 
+           [FLEXSwiftMetadata isSwiftUIViewFromMetadata:objectOrClass];
 }
 
 + (nullable instancetype)mirrorForSwiftUIView:(id)view {
@@ -61,8 +65,14 @@
     // Extract SwiftUI view hierarchy
     _viewHierarchy = [FLEXSwiftUISupport swiftUIViewHierarchyFromView:self.originalValue];
     
-    // Get readable type name
-    _readableTypeName = [FLEXSwiftUISupport readableNameForSwiftUIType:NSStringFromClass([self.originalValue class])];
+    // Get readable type name using enhanced demangling
+    _readableTypeName = [FLEXSwiftNameDemangler extractSwiftUIViewName:NSStringFromClass([self.originalValue class])];
+    if (!_readableTypeName) {
+        _readableTypeName = [FLEXSwiftUISupport readableNameForSwiftUIType:NSStringFromClass([self.originalValue class])];
+    }
+    if (!_readableTypeName) {
+        _readableTypeName = [FLEXSwiftMetadata swiftTypeNameForObject:self.originalValue];
+    }
     
     // Get enhanced description
     _enhancedDescription = [FLEXSwiftUISupport enhancedDescriptionForSwiftUIView:self.originalValue];

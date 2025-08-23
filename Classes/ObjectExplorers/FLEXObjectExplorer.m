@@ -18,6 +18,7 @@
 #import "FLEXMirror.h"
 #import "FLEXSwiftInternal.h"
 #import "FLEXSwiftUIMirror.h"
+#import "FLEXSwiftUIObjectExplorer.h"
 
 @implementation FLEXObjectExplorerDefaults
 
@@ -93,6 +94,16 @@
     
     // No; not swift object, or Reflex unavailable
     return [FLEXMirror reflect:cls];
+}
+
++ (instancetype)explorerViewControllerForObject:(id)object {
+    // Check if this should use the SwiftUI-specific explorer
+    if ([FLEXSwiftUIObjectExplorer canExploreSwiftUIView:object]) {
+        return [FLEXSwiftUIObjectExplorer explorerForSwiftUIView:object];
+    }
+    
+    // Fall back to the default explorer
+    return [[self alloc] initWithObject:object];
 }
 
 

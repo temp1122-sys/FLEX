@@ -1,6 +1,17 @@
 import SwiftUI
 import UIKit
 
+// FLEX is available through the bridging header
+// No need to import FLEX or FLEXSwiftUI modules in CocoaPods setup
+
+// Enable enhanced SwiftUI debugging on app launch
+//private let _ = {
+//    if #available(iOS 15.0, *) {
+//        // Enable the SwiftUI bridge for enhanced introspection
+//        FLEXSwiftUIBridge.enableSwiftUIDebugging()
+//    }
+//}()
+
 // MARK: - Complex SwiftUI View for FLEX Testing
 @available(iOS 15.0, *)
 public struct ComplexSwiftUIView: View {
@@ -23,6 +34,12 @@ public struct ComplexSwiftUIView: View {
                 VStack(spacing: 20) {
                     // Header Section
                     HeaderSection(counter: $counter, isExpanded: $isExpanded)
+                        .onTapGesture {
+                            // Enable direct FLEX inspection of SwiftUI views
+                            if #available(iOS 15.0, *) {
+//                                FLEXSwiftUIBridge.inspect(view: HeaderSection(counter: $counter, isExpanded: $isExpanded))
+                            }
+                        }
                     
                     // Tab View Section
                     TabSection(selectedTab: $selectedTab, colors: colors)

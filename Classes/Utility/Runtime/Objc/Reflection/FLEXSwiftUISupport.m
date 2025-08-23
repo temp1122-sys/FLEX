@@ -14,7 +14,63 @@
 
 static FLEXSwiftUIDescriptionVerbosity _descriptionVerbosity = FLEXSwiftUIDescriptionVerbosityNormal;
 
+// Swift bridge callbacks
+static FLEXSwiftUIEnhancedDescriptionBlock _enhancedDescriptionBlock = nil;
+static FLEXSwiftUIViewHierarchyBlock _viewHierarchyBlock = nil;
+static FLEXSwiftUIDiscoverUIKitViewsBlock _discoverUIKitViewsBlock = nil;
+static FLEXSwiftUIIsSwiftUIBackedViewBlock _isSwiftUIBackedViewBlock = nil;
+
 @implementation FLEXSwiftUISupport
+
+#pragma mark - Swift Bridge Callbacks
+
++ (void)registerSwiftBridgeCallbacks:(nullable FLEXSwiftUIEnhancedDescriptionBlock)enhancedDescriptionBlock
+                   viewHierarchyBlock:(nullable FLEXSwiftUIViewHierarchyBlock)viewHierarchyBlock
+                discoverUIKitViewsBlock:(nullable FLEXSwiftUIDiscoverUIKitViewsBlock)discoverUIKitViewsBlock
+               isSwiftUIBackedViewBlock:(nullable FLEXSwiftUIIsSwiftUIBackedViewBlock)isSwiftUIBackedViewBlock {
+    _enhancedDescriptionBlock = enhancedDescriptionBlock;
+    _viewHierarchyBlock = viewHierarchyBlock;
+    _discoverUIKitViewsBlock = discoverUIKitViewsBlock;
+    _isSwiftUIBackedViewBlock = isSwiftUIBackedViewBlock;
+}
+
++ (void)registerSwiftBridge:(id)bridge {
+    // Create blocks that call methods on the bridge object
+    FLEXSwiftUIEnhancedDescriptionBlock enhancedDescriptionBlock = nil;
+    FLEXSwiftUIViewHierarchyBlock viewHierarchyBlock = nil;
+    FLEXSwiftUIDiscoverUIKitViewsBlock discoverUIKitViewsBlock = nil;
+    FLEXSwiftUIIsSwiftUIBackedViewBlock isSwiftUIBackedViewBlock = nil;
+    
+    if ([bridge respondsToSelector:@selector(enhancedDescriptionForSwiftUIView:)]) {
+        enhancedDescriptionBlock = ^NSString *(id swiftUIView) {
+            return [bridge performSelector:@selector(enhancedDescriptionForSwiftUIView:) withObject:swiftUIView];
+        };
+    }
+    
+    if ([bridge respondsToSelector:@selector(extractViewHierarchyFromSwiftUIView:)]) {
+        viewHierarchyBlock = ^NSDictionary<NSString *, id> *(id swiftUIView) {
+            return [bridge performSelector:@selector(extractViewHierarchyFromSwiftUIView:) withObject:swiftUIView];
+        };
+    }
+    
+    if ([bridge respondsToSelector:@selector(discoverUIKitViewsFromSwiftUIView:)]) {
+        discoverUIKitViewsBlock = ^NSArray<UIView *> *(id swiftUIView) {
+            return [bridge performSelector:@selector(discoverUIKitViewsFromSwiftUIView:) withObject:swiftUIView];
+        };
+    }
+    
+    if ([bridge respondsToSelector:@selector(isSwiftUIBackedView:)]) {
+        isSwiftUIBackedViewBlock = ^BOOL(UIView *view) {
+            NSNumber *result = [bridge performSelector:@selector(isSwiftUIBackedView:) withObject:view];
+            return [result boolValue];
+        };
+    }
+    
+    [self registerSwiftBridgeCallbacks:enhancedDescriptionBlock
+                     viewHierarchyBlock:viewHierarchyBlock
+                  discoverUIKitViewsBlock:discoverUIKitViewsBlock
+                 isSwiftUIBackedViewBlock:isSwiftUIBackedViewBlock];
+}
 
 #pragma mark - Configuration
 
@@ -114,18 +170,29 @@ static FLEXSwiftUIDescriptionVerbosity _descriptionVerbosity = FLEXSwiftUIDescri
     
     NSMutableString *description = [NSMutableString string];
     
-    // Add readable name or class name
-    if (readableName) {
-        [description appendString:readableName];
+    // Try to use the Swift bridge callback for enhanced descriptions
+    if (_enhancedDescriptionBlock) {
+        NSString *bridgeDescription = _enhancedDescriptionBlock(view);
+        if (bridgeDescription && bridgeDescription.length > 0) {
+            [description appendString:bridgeDescription];
+        } else {
+            // Fallback to original implementation
+            [description appendString:readableName ?: className];
+        }
     } else {
-        [description appendString:className];
+        // Original implementation for fallback
+        if (readableName) {
+            [description appendString:readableName];
+        } else {
+            [description appendString:className];
+        }
     }
     
     // Add view-specific information based on verbosity level
     if (verbosity >= FLEXSwiftUIDescriptionVerbosityNormal) {
         NSString *viewInfo = [self extractViewSpecificInfo:view];
         if (viewInfo) {
-            [description appendFormat:@" %@", viewInfo];
+            [description appendFormat:@"\n%@", viewInfo];
         }
     }
     
@@ -463,6 +530,22 @@ static FLEXSwiftUIDescriptionVerbosity _descriptionVerbosity = FLEXSwiftUIDescri
         return shortName;
     }
     
+    // Handle Swift mangled names
+    if ([typeName hasPrefix:@"_TtCC7SwiftUI"]) {
+        NSString *demangled = [self demangleSwiftUITypeName:typeName];
+        if (demangled) {
+            return demangled;
+        }
+    }
+    
+    // Handle other Swift mangled names
+    if ([typeName hasPrefix:@"_TtC"]) {
+        NSString *demangled = [self demangleSwiftTypeName:typeName];
+        if (demangled) {
+            return demangled;
+        }
+    }
+    
     if ([typeName containsString:@"ModifiedContent"]) {
         return @"ModifiedView";
     }
@@ -477,6 +560,103 @@ static FLEXSwiftUIDescriptionVerbosity _descriptionVerbosity = FLEXSwiftUIDescri
     
     if ([typeName containsString:@"_ConditionalContent"]) {
         return @"ConditionalContent";
+    }
+    
+    // Handle common SwiftUI internal types
+    if ([typeName containsString:@"HostingScrollView"]) {
+        return @"SwiftUI Hosting ScrollView";
+    }
+    
+    if ([typeName containsString:@"PlatformGroupContainer"]) {
+        return @"SwiftUI Platform Group Container";
+    }
+    
+    if ([typeName containsString:@"ListTableViewCell"]) {
+        return @"SwiftUI List Cell";
+    }
+    
+    if ([typeName containsString:@"DisplayList"]) {
+        return @"SwiftUI Display List";
+    }
+    
+    if ([typeName containsString:@"ViewHost"]) {
+        return @"SwiftUI View Host";
+    }
+    
+    if ([typeName containsString:@"ContainerView"]) {
+        return @"SwiftUI Container View";
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)demangleSwiftUITypeName:(NSString *)mangledName {
+    // Pattern: _TtCC7SwiftUI<length><classname><length><innerclass>
+    // Example: _TtCC7SwiftUI17HostingScrollView22PlatformGroupContainer
+    
+    if (![mangledName hasPrefix:@"_TtCC7SwiftUI"]) {
+        return nil;
+    }
+    
+    NSString *remaining = [mangledName substringFromIndex:[@"_TtCC7SwiftUI" length]];
+    
+    // Extract first class name
+    NSScanner *scanner = [NSScanner scannerWithString:remaining];
+    NSInteger length;
+    if ([scanner scanInteger:&length] && length > 0) {
+        NSUInteger classNameStart = scanner.scanLocation;
+        if (classNameStart + length <= remaining.length) {
+            NSString *className = [remaining substringWithRange:NSMakeRange(classNameStart, length)];
+            
+            // Check if there's an inner class
+            NSString *afterClassName = [remaining substringFromIndex:classNameStart + length];
+            NSScanner *innerScanner = [NSScanner scannerWithString:afterClassName];
+            NSInteger innerLength;
+            if ([innerScanner scanInteger:&innerLength] && innerLength > 0) {
+                NSUInteger innerClassNameStart = innerScanner.scanLocation;
+                if (innerClassNameStart + innerLength <= afterClassName.length) {
+                    NSString *innerClassName = [afterClassName substringWithRange:NSMakeRange(innerClassNameStart, innerLength)];
+                    return [NSString stringWithFormat:@"SwiftUI.%@.%@", className, innerClassName];
+                }
+            }
+            
+            return [NSString stringWithFormat:@"SwiftUI.%@", className];
+        }
+    }
+    
+    return nil;
+}
+
++ (nullable NSString *)demangleSwiftTypeName:(NSString *)mangledName {
+    // Basic Swift type name demangling for _TtC pattern
+    // Pattern: _TtC<module_length><module_name><class_length><class_name>
+    
+    if (![mangledName hasPrefix:@"_TtC"]) {
+        return nil;
+    }
+    
+    NSString *remaining = [mangledName substringFromIndex:[@"_TtC" length]];
+    NSScanner *scanner = [NSScanner scannerWithString:remaining];
+    
+    // Extract module name
+    NSInteger moduleLength;
+    if ([scanner scanInteger:&moduleLength] && moduleLength > 0) {
+        NSUInteger moduleNameStart = scanner.scanLocation;
+        if (moduleNameStart + moduleLength <= remaining.length) {
+            NSString *moduleName = [remaining substringWithRange:NSMakeRange(moduleNameStart, moduleLength)];
+            
+            // Extract class name
+            NSString *afterModuleName = [remaining substringFromIndex:moduleNameStart + moduleLength];
+            NSScanner *classScanner = [NSScanner scannerWithString:afterModuleName];
+            NSInteger classLength;
+            if ([classScanner scanInteger:&classLength] && classLength > 0) {
+                NSUInteger classNameStart = classScanner.scanLocation;
+                if (classNameStart + classLength <= afterModuleName.length) {
+                    NSString *className = [afterModuleName substringWithRange:NSMakeRange(classNameStart, classLength)];
+                    return [NSString stringWithFormat:@"%@.%@", moduleName, className];
+                }
+            }
+        }
     }
     
     return nil;
@@ -542,7 +722,16 @@ static FLEXSwiftUIDescriptionVerbosity _descriptionVerbosity = FLEXSwiftUIDescri
     
     NSMutableArray<NSDictionary<NSString *, id> *> *hierarchy = [NSMutableArray array];
     
-    // Add current view info
+    // Try to use the Swift bridge callback for enhanced view hierarchy
+    if (_viewHierarchyBlock) {
+        NSDictionary<NSString *, id> *bridgeHierarchy = _viewHierarchyBlock(view);
+        if (bridgeHierarchy && bridgeHierarchy.count > 0) {
+            [hierarchy addObject:bridgeHierarchy];
+            return hierarchy;
+        }
+    }
+    
+    // Fallback to original implementation
     NSMutableDictionary<NSString *, id> *viewInfo = [NSMutableDictionary dictionary];
     viewInfo[@"type"] = NSStringFromClass([view class]);
     viewInfo[@"readableName"] = [self readableNameForSwiftUIType:NSStringFromClass([view class])] ?: @"Unknown";
