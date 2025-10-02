@@ -13,6 +13,7 @@
 #import "NSObject+FLEX_Reflection.h"
 #import "FLEXTypeEncodingParser.h"
 #import "FLEXMethod.h"
+#import "FLEXSwiftUISupport.h"
 
 NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain";
 
@@ -150,6 +151,12 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
 + (NSString *)summaryForObject:(id)value {
     NSString *description = nil;
 
+    // Special case for SwiftUI views and hosting controllers
+    description = [self swiftUIEnhancedSummaryForObject:value];
+    if (description) {
+        return description;
+    }
+
     // Special case BOOL for better readability.
     if ([self safeObject:value isKindOfClass:[NSValue class]]) {
         const char *type = [value objCType];
@@ -178,6 +185,83 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
     }
 
     return description;
+}
+
++ (nullable NSString *)swiftUIEnhancedSummaryForObject:(id)value {
+    if (!value) {
+        return nil;
+    }
+    
+    // Check if it's a SwiftUI hosting controller
+    if ([value isKindOfClass:[UIViewController class]]) {
+        if ([FLEXSwiftUISupport isSwiftUIHostingController:value]) {
+            // Get SwiftUI info from hosting controller
+            NSDictionary<NSString *, id> *swiftUIInfo = [FLEXSwiftUISupport swiftUIInfoFromHostingController:value];
+            if (swiftUIInfo && swiftUIInfo[@"rootViewDescription"]) {
+                return [NSString stringWithFormat:@"SwiftUI Host: %@", swiftUIInfo[@"rootViewDescription"]];
+            }
+            return @"SwiftUI Hosting Controller";
+        }
+    }
+    
+    // Check if it's a SwiftUI view
+    if ([FLEXSwiftUISupport isSwiftUIView:value]) {
+        // Get enhanced description for SwiftUI view
+        NSString *enhancedDescription = [FLEXSwiftUISupport enhancedDescriptionForSwiftUIView:value];
+        if (enhancedDescription) {
+            return enhancedDescription;
+        }
+        
+        // Better fallback to readable type name with memory address
+        NSString *typeName = NSStringFromClass([value class]);
+        NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:typeName];
+        if (readableName) {
+            return [NSString stringWithFormat:@"%@ <%p>", readableName, value];
+        }
+        
+        // Last resort: clean up the class name and add memory address
+        NSString *cleanedTypeName = [self cleanSwiftUITypeName:typeName];
+        return [NSString stringWithFormat:@"%@ <%p>", cleanedTypeName, value];
+    }
+    
+    return nil;
+}
+
++ (NSString *)cleanSwiftUITypeName:(NSString *)typeName {
+    // Remove common SwiftUI namespace prefixes and make more readable
+    NSString *cleaned = typeName;
+    
+    // Remove SwiftUI namespace prefix
+    if ([cleaned hasPrefix:@"SwiftUI."]) {
+        cleaned = [cleaned substringFromIndex:8];
+    }
+    
+    // Remove common internal prefixes
+    NSArray<NSString *> *prefixesToRemove = @[@"_", @"__", @"TGC:", @"IP33_"];
+    for (NSString *prefix in prefixesToRemove) {
+        if ([cleaned hasPrefix:prefix]) {
+            cleaned = [cleaned substringFromIndex:prefix.length];
+        }
+    }
+    
+    // Remove complex generics and internal identifiers
+    NSRange angleRange = [cleaned rangeOfString:@"<"];
+    if (angleRange.location != NSNotFound) {
+        cleaned = [cleaned substringToIndex:angleRange.location];
+    }
+    
+    // Remove internal identifiers with numbers/hashes
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"[A-F0-9]{8,}" options:0 error:nil];
+    if (regex) {
+        cleaned = [regex stringByReplacingMatchesInString:cleaned options:0 range:NSMakeRange(0, cleaned.length) withTemplate:@""];
+    }
+    
+    // If the cleaned name is too short or empty, use a generic name
+    if (cleaned.length < 3) {
+        cleaned = @"SwiftUIView";
+    }
+    
+    return cleaned;
 }
 
 + (BOOL)safeObject:(id)object isKindOfClass:(Class)cls {
@@ -701,6 +785,12 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
         return @"?";
     }
 
+    // Check for SwiftUI types first
+    NSString *swiftUIReadableType = [self swiftUIReadableTypeForEncoding:encodingString];
+    if (swiftUIReadableType) {
+        return swiftUIReadableType;
+    }
+
     // See https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ObjCRuntimeGuide/Articles/ocrtTypeEncodings.html
     // class-dump has a much nicer and much more complete implementation for this task, but it is distributed under GPLv2 :/
     // See https://github.com/nygard/class-dump/blob/master/Source/CDType.m
@@ -840,6 +930,83 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
 
     // If we couldn't translate, just return the original encoding string
     return encodingString;
+}
+
++ (nullable NSString *)swiftUIReadableTypeForEncoding:(NSString *)encodingString {
+    if (!encodingString.length) {
+        return nil;
+    }
+    
+    Class swiftUISupport = NSClassFromString(@"FLEXSwiftUISupport");
+    if (!swiftUISupport) {
+        return nil;
+    }
+    
+    // Check if this is a SwiftUI type encoding
+    if ([encodingString containsString:@"SwiftUI"]) {
+        // Extract the type name from the encoding
+        NSString *typeName = nil;
+        
+        // Handle object type encodings like "@\"SwiftUI.Text\""
+        if ([encodingString hasPrefix:@"@\""] && [encodingString hasSuffix:@"\""]) {
+            typeName = [encodingString substringWithRange:NSMakeRange(2, encodingString.length - 3)];
+        }
+        // Handle struct type encodings like "{SwiftUI.Text=...}"
+        else if ([encodingString hasPrefix:@"{"] && [encodingString containsString:@"="]) {
+            NSRange equalRange = [encodingString rangeOfString:@"="];
+            if (equalRange.location != NSNotFound) {
+                typeName = [encodingString substringWithRange:NSMakeRange(1, equalRange.location - 1)];
+            }
+        }
+        // Handle other SwiftUI type patterns
+        else if ([encodingString containsString:@"SwiftUI"]) {
+            // Extract SwiftUI type from complex encodings
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"SwiftUI\\.[A-Za-z_][A-Za-z0-9_]*" options:0 error:nil];
+            NSTextCheckingResult *match = [regex firstMatchInString:encodingString options:0 range:NSMakeRange(0, encodingString.length)];
+            if (match) {
+                typeName = [encodingString substringWithRange:match.range];
+            }
+        }
+        
+        if (typeName && [swiftUISupport respondsToSelector:@selector(readableNameForSwiftUIType:)]) {
+            NSString *readableName = [swiftUISupport readableNameForSwiftUIType:typeName];
+            if (readableName) {
+                return readableName;
+            }
+        }
+    }
+    
+    // Handle Swift generic types that might contain SwiftUI components
+    if ([encodingString containsString:@"<"] && [encodingString containsString:@">"]) {
+        // Extract generic type information
+        NSRange startRange = [encodingString rangeOfString:@"<"];
+        NSRange endRange = [encodingString rangeOfString:@">" options:NSBackwardsSearch];
+        
+        if (startRange.location != NSNotFound && endRange.location != NSNotFound && endRange.location > startRange.location) {
+            NSString *baseType = [encodingString substringToIndex:startRange.location];
+            NSString *genericParams = [encodingString substringWithRange:NSMakeRange(startRange.location + 1, endRange.location - startRange.location - 1)];
+            
+            // Check if base type is SwiftUI
+            if ([swiftUISupport respondsToSelector:@selector(readableNameForSwiftUIType:)]) {
+                NSString *readableBase = [swiftUISupport readableNameForSwiftUIType:baseType];
+                if (readableBase) {
+                    // Try to make generic parameters readable too
+                    NSArray<NSString *> *params = [genericParams componentsSeparatedByString:@","];
+                    NSMutableArray<NSString *> *readableParams = [NSMutableArray array];
+                    
+                    for (NSString *param in params) {
+                        NSString *trimmedParam = [param stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+                        NSString *readableParam = [swiftUISupport readableNameForSwiftUIType:trimmedParam];
+                        [readableParams addObject:readableParam ?: trimmedParam];
+                    }
+                    
+                    return [NSString stringWithFormat:@"%@<%@>", readableBase, [readableParams componentsJoinedByString:@", "]];
+                }
+            }
+        }
+    }
+    
+    return nil;
 }
 
 

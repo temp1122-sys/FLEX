@@ -10,6 +10,7 @@
 #import "FLEXUtility.h"
 #import "FLEXResources.h"
 #import "FLEXWindow.h"
+#import "FLEXSwiftUISupport.h"
 #import <ImageIO/ImageIO.h>
 #import <objc/runtime.h>
 #import <zlib.h>
@@ -91,8 +92,45 @@ BOOL FLEXConstructorsShouldRun(void) {
 + (NSString *)descriptionForView:(UIView *)view includingFrame:(BOOL)includeFrame {
     NSString *description = [[view class] description];
     
+    // Check if it's a SwiftUI hosting controller
+    UIViewController *viewController = [self viewControllerForView:view];
+    if (viewController && [FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
+        description = [description stringByAppendingString:@" [SwiftUI Host]"];
+        
+        // Log detailed SwiftUI information
+        NSString *className = NSStringFromClass([viewController class]);
+        NSLog(@"SwiftUI Host Controller: %@", viewController);
+        NSLog(@"SwiftUI Host Controller Class: %@", className);
+        
+        // Try to demangle the class name
+        NSString *demangledName = [FLEXSwiftUISupport demangleSwiftUITypeName:className];
+        if (demangledName) {
+            NSLog(@"🎯 Demangled SwiftUI Type: %@", demangledName);
+        }
+        
+        // Try to extract the SwiftUI view type from the mangled class name
+        NSString *swiftUIViewType = [FLEXSwiftUISupport extractSwiftUIViewTypeFromMangledName:className];
+        if (swiftUIViewType) {
+            NSLog(@"Detected SwiftUI View Type: %@", swiftUIViewType);
+        }
+        
+        // Get SwiftUI information from the hosting controller
+        NSDictionary *swiftUIInfo = [FLEXSwiftUISupport swiftUIInfoFromHostingController:viewController];
+        NSLog(@"SwiftUI Info: %@", swiftUIInfo);
+        
+        if (swiftUIInfo[@"rootViewType"]) {
+            NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:swiftUIInfo[@"rootViewType"]];
+            if (readableName) {
+                description = [description stringByAppendingFormat:@" → %@", readableName];
+            }
+        } else if (swiftUIViewType) {
+            // Fallback to extracted type from mangled name
+            description = [description stringByAppendingFormat:@" → %@", swiftUIViewType];
+        }
+    }
+    
     NSString *viewControllerDescription = [[[self viewControllerForView:view] class] description];
-    if (viewControllerDescription.length > 0) {
+    if (viewControllerDescription.length > 0 && ![FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
         description = [description stringByAppendingFormat:@" (%@)", viewControllerDescription];
     }
     
@@ -159,7 +197,18 @@ BOOL FLEXConstructorsShouldRun(void) {
 }
 
 + (NSString *)detailDescriptionForView:(UIView *)view {
-    return [NSString stringWithFormat:@"frame %@", [self stringForCGRect:view.frame]];
+    NSMutableString *details = [NSMutableString stringWithFormat:@"frame %@", [self stringForCGRect:view.frame]];
+    
+    // Add SwiftUI information if available
+    UIViewController *viewController = [self viewControllerForView:view];
+    if (viewController && [FLEXSwiftUISupport isSwiftUIHostingController:viewController]) {
+        NSDictionary *swiftUIInfo = [FLEXSwiftUISupport swiftUIInfoFromHostingController:viewController];
+        if (swiftUIInfo[@"rootViewDescription"]) {
+            [details appendFormat:@" • %@", swiftUIInfo[@"rootViewDescription"]];
+        }
+    }
+    
+    return details.copy;
 }
 
 + (UIImage *)circularImageWithColor:(UIColor *)color radius:(CGFloat)radius {
