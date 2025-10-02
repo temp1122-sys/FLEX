@@ -73,6 +73,8 @@
         case FLEXGlobalsRowBrowseContainer:
             return [FLEXFileBrowserController flex_concreteGlobalsEntry:row];
         case FLEXGlobalsRowSystemLog:
+            return [FLEXSystemLogViewController flex_concreteGlobalsEntry:row];
+        case FLEXGlobalsRowSystemLogNew:
             return [FLEXNewSystemLogViewController flex_concreteGlobalsEntry:row];
         case FLEXGlobalsRowNetworkHistory:
             return [FLEXNetworkMITMViewController flex_concreteGlobalsEntry:row];
