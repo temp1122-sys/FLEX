@@ -14,6 +14,7 @@ typedef NS_ENUM(NSUInteger, FLEXGlobalsRow) {
     FLEXGlobalsRowProcessInfo,
     FLEXGlobalsRowNetworkHistory,
     FLEXGlobalsRowSystemLog,
+    FLEXGlobalsRowSystemLogNew,
     FLEXGlobalsRowLiveObjects,
     FLEXGlobalsRowAddressInspector,
     FLEXGlobalsRowCookies,
