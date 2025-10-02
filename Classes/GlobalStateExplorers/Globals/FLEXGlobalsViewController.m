@@ -118,6 +118,7 @@
             @(FLEXGlobalsSectionProcessAndEvents) : @[
                 [self globalsEntryForRow:FLEXGlobalsRowNetworkHistory],
                 [self globalsEntryForRow:FLEXGlobalsRowSystemLog],
+                [self globalsEntryForRow:FLEXGlobalsRowSystemLogNew],
                 [self globalsEntryForRow:FLEXGlobalsRowProcessInfo],
                 [self globalsEntryForRow:FLEXGlobalsRowLiveObjects],
                 [self globalsEntryForRow:FLEXGlobalsRowAddressInspector],
