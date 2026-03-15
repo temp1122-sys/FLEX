@@ -50,10 +50,10 @@ let package = Package(
                 .product(name: "SwiftUIIntrospect", package: "swiftui-introspect")
             ],
             path: "Sources/FLEXSwiftUI",
+            cSettings: .headerSearchPaths + .warningFlags,
             swiftSettings: [
                 .define("FLEX_SWIFTUI_ENABLED")
             ],
-            cSettings: .headerSearchPaths + .warningFlags,
             linkerSettings: [
                 .linkedFramework("CoreGraphics"),
                 .linkedLibrary("sqlite3"),

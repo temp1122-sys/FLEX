@@ -528,6 +528,50 @@
     // Try to get properties from Swift mirror via bridge
     @try {
         id mirrorInfo = [self.swiftUIMirror valueForKey:@"mirroredSubject"];
+        
+        // Check if mirrorInfo is available and is a dictionary
+        if ([mirrorInfo isKindOfClass:[NSDictionary class]]) {
+            NSDictionary *mirrorDict = (NSDictionary *)mirrorInfo;
+            NSArray *propertyNames = mirrorDict.allKeys;
+            
+            for (NSString *propertyName in propertyNames) {
+                // Skip private properties
+                if ([propertyName hasPrefix:@"_"]) {
+                    continue;
+                }
+                
+                id propertyValue = mirrorDict[propertyName];
+                
+                // Get type and create description
+                NSString *typeDescription = NSStringFromClass([propertyValue class]);
+                
+                // Create row with property info
+                NSDictionary *propertyRowValue = [NSMutableDictionary dictionary];
+                [propertyRowValue setObject:propertyValue forKey:@"rawValue"];
+                [propertyRowValue setObject:typeDescription forKey:@"description"];
+                [propertyRowValue setObject:typeDescription forKey:@"type"];
+                
+                [section addRowWithTitle:propertyName value:propertyRowValue];
+            }
+        }
+    } @catch (NSException *exception) {
+        // If mirror access fails, show basic type info
+        NSString *typeName = NSStringFromClass([self.object class]);
+        [section addRowWithTitle:@"Type" value:typeName];
+    }
+    
+    if (section.rowCount == 0) {
+        [section addRowWithTitle:@"Properties" value:@"No accessible properties found"];
+    }
+    
+    return section.rowCount > 0 ? section : nil;
+}
+    
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"Enhanced SwiftUI Properties"];
+    
+    // Try to get properties from Swift mirror via bridge
+    @try {
+        id mirrorInfo = [self.swiftUIMirror valueForKey:@"mirroredSubject"];
         if ([mirrorInfo isKindOfClass:[NSDictionary class]]) {
             NSDictionary *mirrorDict = (NSDictionary *)mirrorInfo;
             NSArray<NSString *> *propertyNames = mirrorDict.allKeys;

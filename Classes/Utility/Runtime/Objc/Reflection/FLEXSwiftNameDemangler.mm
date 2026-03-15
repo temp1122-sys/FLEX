@@ -7,6 +7,7 @@
 //
 
 #import "FLEXSwiftNameDemangler.h"
+#import "FLEXSwiftABIParser.h"
 #import <dlfcn.h>
 #include <string>
 #include <unordered_map>
@@ -77,7 +78,21 @@ static swift_demangle_function swift_demangle = nullptr;
         return runtimeResult;
     }
     
-    // Fallback to our own implementation
+    // Try new Swift 5+ ABI parser
+    NSDictionary<NSString *, id> *abiResult = [FLEXSwiftABIParser parseSwift5MangledName:mangledName];
+    if (abiResult) {
+        NSString *readableName = abiResult[@"readableName"];
+        NSString *readableSwiftUIName = abiResult[@"readableSwiftUIName"];
+        
+        // Prefer SwiftUI readable name if available
+        NSString *result = readableSwiftUIName ?: readableName;
+        if (result) {
+            demangledNameCache[mangledStdString] = [result UTF8String];
+            return result;
+        }
+    }
+    
+    // Fallback to legacy implementation
     NSString *fallbackResult = [self fallbackDemangle:mangledName];
     if (fallbackResult) {
         demangledNameCache[mangledStdString] = [fallbackResult UTF8String];
@@ -122,10 +137,54 @@ static swift_demangle_function swift_demangle = nullptr;
 }
 
 + (nullable NSString *)extractSwiftUIViewName:(NSString *)mangledViewType {
-    NSString *demangled = [self demangleSwiftUIName:mangledViewType];
+    // First try using the new Swift 5+ ABI parser
+    NSDictionary<NSString *, id> *abiResult = [FLEXSwiftABIParser parseSwift5MangledName:mangledViewType];
+    if (abiResult) {
+        NSString *readableSwiftUIName = abiResult[@"readableSwiftUIName"];
+        if (readableSwiftUIName) {
+            return readableSwiftUIName;
+        }
+        
+        // Fall back to regular demangling
+        NSString *demangled = [self demangleSwiftName:mangledViewType];
+        if (!demangled) {
+            return nil;
+        }
+        
+        // Extract actual view name from SwiftUI wrappers
+        NSArray<NSString *> *patterns = @[
+            @"SwiftUI\\.(.+)",
+            @".*\\.(.+View)",
+            @".*\\.(.+Button)",
+            @".*\\.(.+Text)",
+            @".*\\.(.+Stack)",
+            @".*\\.(.+List)",
+            @".*\\.(.+)"
+        ];
+        
+        for (NSString *pattern in patterns) {
+            NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern 
+                                                                                    options:0 
+                                                                                      error:nil];
+            NSTextCheckingResult *match = [regex firstMatchInString:demangled 
+                                                             options:0 
+                                                               range:NSMakeRange(0, demangled.length)];
+            if (match && match.numberOfRanges > 1) {
+                return [demangled substringWithRange:[match rangeAtIndex:1]];
+            }
+        }
+        
+        return demangled;
+    }
+    
+    // Legacy fallback for older Swift mangling
+    NSString *demangled = [self demangleSwiftName:mangledViewType];
     if (!demangled) {
         return nil;
     }
+    
+    return demangled;
+}
     
     // Extract the actual view name from SwiftUI wrappers
     NSArray<NSString *> *patterns = @[
