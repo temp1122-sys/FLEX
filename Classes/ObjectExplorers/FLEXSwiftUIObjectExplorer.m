@@ -14,6 +14,7 @@
 #import "FLEXSwiftUIMirror.h"
 #import "FLEXTableViewSection.h"
 #import "FLEXSingleRowSection.h"
+#import "FLEXMultiRowSection.h"
 #import "FLEXKeyValueTableViewCell.h"
 #import "FLEXObjectExplorerFactory.h"
 #import "FLEXUtility.h"
@@ -219,6 +220,46 @@
         return nil;
     }
     
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"SwiftUI Type Information"];
+    
+    // Readable type name
+    if (self.readableViewName) {
+        [section addRowWithTitle:@"SwiftUI Type" value:self.readableViewName];
+    }
+    
+    // Full type name
+    NSString *fullTypeName = self.swiftTypeInfo[@"fullTypeName"];
+    if (fullTypeName) {
+        [section addRowWithTitle:@"Full Type Name" value:fullTypeName];
+    }
+    
+    // Module name
+    NSString *moduleName = self.swiftTypeInfo[@"moduleName"];
+    if (moduleName) {
+        [section addRowWithTitle:@"Module" value:moduleName];
+    }
+    
+    // Metadata information
+    NSNumber *hasMetadata = self.swiftTypeInfo[@"hasMetadata"];
+    if (hasMetadata) {
+        [section addRowWithTitle:@"Has Swift Metadata" value:hasMetadata.boolValue ? @"Yes" : @"No"];
+    }
+    
+    // Metadata kind
+    NSNumber *metadataKind = self.swiftTypeInfo[@"metadataKind"];
+    if (metadataKind) {
+        [section addRowWithTitle:@"Metadata Kind" value:metadataKind.stringValue];
+    }
+    
+    // Field count
+    NSNumber *fieldCount = self.swiftTypeInfo[@"fieldCount"];
+    if (fieldCount) {
+        [section addRowWithTitle:@"Field Count" value:fieldCount.stringValue];
+    }
+    
+    return section.rowCount > 0 ? section : nil;
+}
+    
     NSMutableArray<NSString *> *titles = [NSMutableArray array];
     NSMutableArray<NSString *> *values = [NSMutableArray array];
     
@@ -278,6 +319,38 @@
         return nil;
     }
     
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"SwiftUI View Hierarchy"];
+    
+    NSUInteger index = 0;
+    for (NSDictionary<NSString *, id> *viewInfo in self.swiftUIViewHierarchy) {
+        NSString *readableName = viewInfo[@"readableName"] ?: viewInfo[@"type"];
+        NSString *description = viewInfo[@"description"];
+        NSString *type = viewInfo[@"type"];
+        
+        // Create combined title with index
+        NSString *rowTitle = readableName ?: type;
+        
+        // Value is the view info dictionary
+        NSMutableDictionary<NSString *, id> *valueDict = [NSMutableDictionary dictionary];
+        valueDict[@"readableName"] = readableName;
+        valueDict[@"type"] = type;
+        valueDict[@"description"] = description;
+        valueDict[@"index"] = @(index);
+        
+        // Add child count if available
+        NSArray<NSDictionary<NSString *, id> *> *children = viewInfo[@"children"];
+        if (children && children.count > 0) {
+            valueDict[@"childCount"] = @(children.count);
+        }
+        
+        [section addRowWithTitle:rowTitle value:valueDict];
+        
+        index++;
+    }
+    
+    return section.rowCount > 0 ? section : nil;
+}
+    
     NSMutableArray<NSString *> *titles = [NSMutableArray array];
     NSMutableArray<NSDictionary<NSString *, id> *> *objects = [NSMutableArray array];
     
@@ -309,28 +382,184 @@
 }
 
 - (nullable FLEXTableViewSection *)swiftUIStateSection {
-    // TODO: Implement proper multi-row section for SwiftUI state
-    return nil;
+    if (!self.swiftUIState || self.swiftUIState.count == 0) {
+        return nil;
+    }
+    
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"SwiftUI State Variables"];
+    
+    [self.swiftUIState enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
+        NSString *typeDescription = NSStringFromClass([value class]);
+        
+        // Create a readable value description
+        NSString *valueDescription = nil;
+        if ([value isKindOfClass:[NSString class]]) {
+            valueDescription = (NSString *)value;
+        } else if ([value isKindOfClass:[NSNumber class]]) {
+            valueDescription = [(NSNumber *)value stringValue];
+        } else if ([value isKindOfClass:[NSArray class]]) {
+            NSArray *array = (NSArray *)value;
+            valueDescription = [NSString stringWithFormat:@"[%lu items]", (unsigned long)array.count];
+        } else {
+            valueDescription = [NSString stringWithFormat:@"<%@>", typeDescription];
+        }
+        
+        // Add row with state info
+        [section addRowWithTitle:key value:@{
+            @"rawValue": value,
+            @"type": typeDescription,
+            @"valueDescription": valueDescription
+        }];
+    }];
+    
+    return section.rowCount > 0 ? section : nil;
 }
 
 - (nullable FLEXTableViewSection *)swiftUIBindingsSection {
-    // TODO: Implement proper multi-row section for SwiftUI bindings
-    return nil;
+    if (!self.swiftUIBindings || self.swiftUIBindings.count == 0) {
+        return nil;
+    }
+    
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"SwiftUI Bindings"];
+    
+    [self.swiftUIBindings enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
+        NSString *valueDescription = nil;
+        
+        // Try to get binding target info
+        if ([value isKindOfClass:[NSDictionary class]]) {
+            NSDictionary *bindingInfo = (NSDictionary *)value;
+            NSString *target = bindingInfo[@"target"];
+            NSString *targetType = bindingInfo[@"targetType"];
+            
+            valueDescription = [NSString stringWithFormat:@"Target: %@ (%@)", 
+                              FLEXPluralString(targetType, @"object"), 
+                              FLEXDescriptionOfObject(target)];
+        } else {
+            valueDescription = FLEXDescriptionOfObject(value);
+        }
+        
+        // Add row with binding info
+        [section addRowWithTitle:key value:@{
+            @"bindingInfo": value,
+            @"description": valueDescription
+        }];
+    }];
+    
+    return section.rowCount > 0 ? section : nil;
 }
 
 - (nullable FLEXTableViewSection *)swiftUIEnvironmentSection {
-    // TODO: Implement proper multi-row section for SwiftUI environment
-    return nil;
+    if (!self.swiftUIEnvironment || self.swiftUIEnvironment.count == 0) {
+        return nil;
+    }
+    
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"SwiftUI Environment Values"];
+    
+    [self.swiftUIEnvironment enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
+        NSString *valueDescription = FLEXDescriptionOfObject(value);
+        
+        // Add row with environment info
+        [section addRowWithTitle:key value:@{
+            @"value": value,
+            @"description": valueDescription
+        }];
+    }];
+    
+    // Add separator
+    [section addSeparator];
+    
+    // Add informational row about environment access
+    [section addRowWithTitle:@"Note" value:@"Environment values may not reflect current view context"];
+    
+    return section.rowCount > 0 ? section : nil;
 }
 
 - (nullable FLEXTableViewSection *)swiftUIModifiersSection {
-    // TODO: Implement proper section for SwiftUI modifiers
-    return nil;
+    // Extract modifier information from the view hierarchy or type info
+    if (!self.swiftTypeInfo) {
+        return nil;
+    }
+    
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"SwiftUI Modifiers"];
+    
+    NSString *fullTypeName = self.swiftTypeInfo[@"fullTypeName"];
+    if (!fullTypeName) {
+        return nil;
+    }
+    
+    // Check if this is a ModifiedContent (which has modifiers)
+    if ([fullTypeName containsString:@"ModifiedContent"]) {
+        [section addRowWithTitle:@"Modified View" value:@"This view has modifiers applied"];
+        
+        // Try to extract modifier information from Swift metadata
+        NSArray<NSDictionary<NSString *, id> *> *fields = self.swiftTypeInfo[@"fields"];
+        if (fields) {
+            for (NSDictionary<NSString *, id> *field in fields) {
+                NSString *fieldName = field[@"name"];
+                id fieldValue = field[@"value"];
+                
+                if ([fieldName containsString:@"modifier"] || [fieldName containsString:@"Modifier"]) {
+                    NSString *modifierType = NSStringFromClass([fieldValue class]);
+                    [section addRowWithTitle:@"Modifier Found" value:@{
+                        @"type": modifierType,
+                        @"description": FLEXDescriptionOfObject(fieldValue)
+                    }];
+                }
+            }
+        }
+    } else {
+        [section addRowWithTitle:@"No Modifiers" value:@"This view type doesn't track modifiers"];
+    }
+    
+    // Add informational note
+    [section addSeparator];
+    [section addRowWithTitle:@"Note" value:@"Modifier extraction is limited by SwiftUI internals"];
+    
+    return section.rowCount > 0 ? section : nil;
 }
 
 - (nullable FLEXTableViewSection *)createEnhancedPropertiesSection {
-    // TODO: Implement proper section for enhanced SwiftUI properties
-    return nil;
+    if (!self.swiftUIMirror) {
+        return nil;
+    }
+    
+    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"Enhanced SwiftUI Properties"];
+    
+    // Try to get properties from Swift mirror via bridge
+    @try {
+        id mirrorInfo = [self.swiftUIMirror valueForKey:@"mirroredSubject"];
+        if ([mirrorInfo isKindOfClass:[NSDictionary class]]) {
+            NSDictionary *mirrorDict = (NSDictionary *)mirrorInfo;
+            NSArray<NSString *> *propertyNames = mirrorDict.allKeys;
+            
+            for (NSString *propertyName in propertyNames) {
+                // Skip private properties
+                if ([propertyName hasPrefix:@"_"]) {
+                    continue;
+                }
+                
+                id propertyValue = mirrorDict[propertyName];
+                NSString *typeDescription = NSStringFromClass([propertyValue class]);
+                
+                // Create row with property info
+                NSDictionary<NSString *, id> *propertyDict = [NSMutableDictionary dictionary];
+                [(NSMutableDictionary *)propertyDict setObject:propertyValue forKey:@"rawValue"];
+                [(NSMutableDictionary *)propertyDict setObject:typeDescription forKey:@"description"];
+                
+                [section addRowWithTitle:propertyName value:propertyDict];
+            }
+        }
+    } @catch (NSException *exception) {
+        // If mirror access fails, show at least basic type info
+        NSString *typeName = NSStringFromClass([self.object class]);
+        [section addRowWithTitle:@"Type" value:typeName];
+    }
+    
+    if (section.rowCount == 0) {
+        [section addRowWithTitle:@"Properties" value:@"No accessible properties found"];
+    }
+    
+    return section.rowCount > 0 ? section : nil;
 }
 
 #pragma mark - View Manipulation
