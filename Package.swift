@@ -52,6 +52,12 @@ let package = Package(
             path: "Sources/FLEXSwiftUI",
             swiftSettings: [
                 .define("FLEX_SWIFTUI_ENABLED")
+            ],
+            cSettings: .headerSearchPaths + .warningFlags,
+            linkerSettings: [
+                .linkedFramework("CoreGraphics"),
+                .linkedLibrary("sqlite3"),
+                .linkedLibrary("z"),
             ]
         )
     ],
@@ -68,12 +74,12 @@ extension Array where Element == CSetting {
                 "-Wno-unsupported-availability-guard",
             ])]
         }
-        
+
         return []
     }
-    
+
     /// These are the header search paths needed for FLEX to compile, not
-    /// the headers used by projects linking against FLEX.
+    /// headers used by projects linking against FLEX.
     ///
     /// Do not modify the contents of this property by hand;
     /// Instead, run `bash generate-spm-headers.sh | grep headerSearchPath | pbcopy`
