@@ -26,6 +26,7 @@
 
 @property (nonatomic, strong) NSMutableArray<FLEXMultiRowRow *> *rows;
 @property (nonatomic, copy, nullable) FLEXMultiRowConfigureBlock cellConfigureBlock;
+@property (nonatomic, copy, nullable) NSString *reuseIdentifier;
 
 @end
 
@@ -38,11 +39,7 @@
 }
 
 + (instancetype)sectionWithTitle:(NSString *)title reuseIdentifier:(NSString *)reuseIdentifier {
-    FLEXMultiRowSection *section = [[self alloc] initWithTitle:title];
-    section->_reuseIdentifier = [reuseIdentifier copy];
-    section->_footerTitle = nil;
-    section->_sectionIndex = NSNotFound;
-    return section;
+    return [[self alloc] initWithTitle:title reuseIdentifier:reuseIdentifier];
 }
 
 - (instancetype)initWithTitle:(NSString *)title {
@@ -51,6 +48,16 @@
         _title = [title copy];
         _rows = [NSMutableArray array];
         _reuseIdentifier = [kFLEXDefaultCell copy];
+    }
+    return self;
+}
+
+- (instancetype)initWithTitle:(NSString *)title reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super init];
+    if (self) {
+        _title = [title copy];
+        _rows = [NSMutableArray array];
+        _reuseIdentifier = [reuseIdentifier copy] ?: [kFLEXDefaultCell copy];
     }
     return self;
 }
@@ -177,18 +184,14 @@
     return cell;
 }
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (indexPath.row < self.rows.count) {
-        FLEXMultiRowRow *row = self.rows[indexPath.row];
-        
-        if (row.value && [row.value isKindOfClass:[UIViewController class]]) {
-            UIViewController *viewController = (UIViewController *)row.value;
-            if (viewController) {
-                [tableView deselectRowAtIndexPath:indexPath animated:YES];
-                [self.navigationController pushViewController:viewController animated:YES];
-            }
+- (nullable UIViewController *)viewControllerToPushForRow:(NSInteger)row {
+    if (row < self.rows.count) {
+        FLEXMultiRowRow *multiRow = self.rows[row];
+        if (multiRow.value && [multiRow.value isKindOfClass:[UIViewController class]]) {
+            return (UIViewController *)multiRow.value;
         }
     }
+    return nil;
 }
 
 @end

@@ -185,32 +185,6 @@ static swift_demangle_function swift_demangle = nullptr;
     
     return demangled;
 }
-    
-    // Extract the actual view name from SwiftUI wrappers
-    NSArray<NSString *> *patterns = @[
-        @"SwiftUI\\.(.+)",
-        @".*\\.(.+View)",
-        @".*\\.(.+Button)",
-        @".*\\.(.+Text)",
-        @".*\\.(.+Stack)",
-        @".*\\.(.+List)",
-        @".*\\.(.+)"
-    ];
-    
-    for (NSString *pattern in patterns) {
-        NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern 
-                                                                               options:0 
-                                                                                 error:nil];
-        NSTextCheckingResult *match = [regex firstMatchInString:demangled 
-                                                        options:0 
-                                                          range:NSMakeRange(0, demangled.length)];
-        if (match && match.numberOfRanges > 1) {
-            return [demangled substringWithRange:[match rangeAtIndex:1]];
-        }
-    }
-    
-    return demangled;
-}
 
 #pragma mark - Name Components
 
@@ -302,14 +276,21 @@ static swift_demangle_function swift_demangle = nullptr;
     const char *mangledCString = [mangledName UTF8String];
     size_t mangledLength = strlen(mangledCString);
     
-    // Call Swift runtime demangling function
+    // Call Swift runtime demangling function.
+    // When outputBuffer is nullptr, swift_demangle allocates its own buffer.
+    // The outputBufferSize parameter reflects buffer capacity, NOT string length,
+    // and may remain 0 even on success — so we must NOT check bufferSize > 0.
     size_t bufferSize = 0;
     char *demangledBuffer = swift_demangle(mangledCString, mangledLength, nullptr, &bufferSize, 0);
     
-    if (demangledBuffer && bufferSize > 0) {
+    if (demangledBuffer) {
         NSString *result = @(demangledBuffer);
         free(demangledBuffer);
-        return result;
+        // Only return if we got a meaningful result that differs from the input.
+        // swift_demangle returns the input unchanged when it can't demangle.
+        if (result.length > 0 && ![result isEqualToString:mangledName]) {
+            return result;
+        }
     }
     
     return nil;
@@ -320,22 +301,14 @@ static swift_demangle_function swift_demangle = nullptr;
         return nil;
     }
     
-    // Basic fallback demangling for common patterns
-    NSMutableString *result = [mangledName mutableCopy];
-    
     // Handle basic Swift 5+ mangling patterns
     if ([mangledName hasPrefix:@"$S"] || [mangledName hasPrefix:@"$s"]) {
         return [self demangleSwift5Name:mangledName];
     }
     
-    // Handle legacy Swift mangling
+    // Handle legacy Swift mangling (_TtC, _TtV, _TtG, _TtO, etc.)
     if ([mangledName hasPrefix:@"_T"]) {
         return [self demangleLegacySwiftName:mangledName];
-    }
-    
-    // Handle Objective-C style Swift classes
-    if ([mangledName hasPrefix:@"_TtC"]) {
-        return [self demangleObjCStyleSwiftClass:mangledName];
     }
     
     return nil;
@@ -384,13 +357,267 @@ static swift_demangle_function swift_demangle = nullptr;
 }
 
 + (nullable NSString *)demangleLegacySwiftName:(NSString *)mangledName {
-    // Basic legacy Swift demangling (simplified)
+    // Handle _TtCC (nested class type) — must check before _TtC
+    // Format: _TtCC<outerModuleLen><outerModule><outerTypeLen><outerType><innerTypeLen><innerType>
+    // Example: _TtCC7SwiftUI17HostingScrollView22PlatformScrollView
+    //   → SwiftUI.HostingScrollView.PlatformScrollView
+    if ([mangledName hasPrefix:@"_TtCC"]) {
+        return [self demangleLegacyNestedClass:mangledName];
+    }
+    
+    // Handle _TtC (class type)
     if ([mangledName hasPrefix:@"_TtC"]) {
         return [self demangleObjCStyleSwiftClass:mangledName];
     }
     
-    // Handle other legacy patterns
-    return [mangledName substringFromIndex:2]; // Skip "_T"
+    // Handle _TtG (generic type specialization)
+    // Format: _TtG<baseType><genericParam1><genericParam2>..._
+    // Example: _TtGC7SwiftUI19UIHostingControllerV9FLEXample18ComplexSwiftUIView_
+    //   baseType = C7SwiftUI19UIHostingController  (class SwiftUI.UIHostingController)
+    //   param1   = V9FLEXample18ComplexSwiftUIView  (struct FLEXample.ComplexSwiftUIView)
+    if ([mangledName hasPrefix:@"_TtG"]) {
+        return [self demangleLegacyGenericType:mangledName];
+    }
+    
+    // Handle _TtV (struct type)
+    if ([mangledName hasPrefix:@"_TtV"]) {
+        return [self demangleLegacyNominalType:mangledName startIndex:4];
+    }
+    
+    // Handle _TtO (enum type)
+    if ([mangledName hasPrefix:@"_TtO"]) {
+        return [self demangleLegacyNominalType:mangledName startIndex:4];
+    }
+    
+    return nil;
+}
+
+/// Parse a legacy nominal type (class/struct/enum) starting at the given index.
+/// Format: <length><name><length><name>
+/// Returns "Module.TypeName" or nil.
++ (nullable NSString *)demangleLegacyNominalType:(NSString *)mangledName startIndex:(NSUInteger)startIndex {
+    if (startIndex >= mangledName.length) return nil;
+    
+    NSString *body = [mangledName substringFromIndex:startIndex];
+    NSScanner *scanner = [NSScanner scannerWithString:body];
+    
+    // Extract module name
+    NSInteger moduleLength;
+    if (![scanner scanInteger:&moduleLength] || moduleLength <= 0 || moduleLength > 200) {
+        return nil;
+    }
+    if (scanner.scanLocation + moduleLength > body.length) return nil;
+    NSString *moduleName = [body substringWithRange:NSMakeRange(scanner.scanLocation, moduleLength)];
+    scanner.scanLocation += moduleLength;
+    
+    // Extract type name
+    NSInteger typeLength;
+    if (![scanner scanInteger:&typeLength] || typeLength <= 0 || typeLength > 200) {
+        return moduleName;
+    }
+    if (scanner.scanLocation + typeLength > body.length) return moduleName;
+    NSString *typeName = [body substringWithRange:NSMakeRange(scanner.scanLocation, typeLength)];
+    
+    return [NSString stringWithFormat:@"%@.%@", moduleName, typeName];
+}
+
+/// Parse a legacy generic type: _TtG<baseType><genericParams>_
+/// The baseType starts with a type kind letter (C/V/O/P).
+/// Each genericParam also starts with a type kind letter.
+/// Returns "Module.BaseType<Module.Param1, Module.Param2, ...>" or nil.
++ (nullable NSString *)demangleLegacyGenericType:(NSString *)mangledName {
+    if (mangledName.length < 6) return nil;
+    
+    // Strip _TtG prefix
+    NSString *body = [mangledName substringFromIndex:4];
+    
+    // Strip trailing underscore if present (terminator for generic)
+    if ([body hasSuffix:@"_"]) {
+        body = [body substringToIndex:body.length - 1];
+    }
+    
+    // Parse the base type (starts with C/V/O/P)
+    NSString *baseTypeParsed = nil;
+    NSUInteger consumedLength = 0;
+    [self parseLegacyTypeComponent:body result:&baseTypeParsed consumed:&consumedLength];
+    
+    if (!baseTypeParsed || consumedLength == 0) {
+        return nil;
+    }
+    
+    // Parse generic parameters (remaining body after base type)
+    NSString *remaining = [body substringFromIndex:consumedLength];
+    NSMutableArray<NSString *> *genericParams = [NSMutableArray array];
+    
+    while (remaining.length > 0) {
+        NSString *paramParsed = nil;
+        NSUInteger paramConsumed = 0;
+        [self parseLegacyTypeComponent:remaining result:&paramParsed consumed:&paramConsumed];
+        
+        if (paramParsed && paramConsumed > 0) {
+            [genericParams addObject:paramParsed];
+            remaining = [remaining substringFromIndex:paramConsumed];
+        } else {
+            break;
+        }
+    }
+    
+    if (genericParams.count > 0) {
+        NSString *paramsStr = [genericParams componentsJoinedByString:@", "];
+        return [NSString stringWithFormat:@"%@<%@>", baseTypeParsed, paramsStr];
+    }
+    
+    return baseTypeParsed;
+}
+
+/// Parse a single legacy type component (C/V/O for class/struct/enum)
+/// followed by <moduleLen><module><typeLen><type>.
+/// Sets result to "Module.Type" and consumed to the number of characters consumed.
++ (void)parseLegacyTypeComponent:(NSString *)body
+                          result:(NSString *__autoreleasing *)outResult
+                        consumed:(NSUInteger *)outConsumed {
+    if (!body || body.length < 2) {
+        *outResult = nil;
+        *outConsumed = 0;
+        return;
+    }
+    
+    unichar kind = [body characterAtIndex:0];
+    
+    // Recursive: generic type within generic parameters (G prefix)
+    if (kind == 'G') {
+        // Nested generic: G<baseType><params>_
+        // Find the matching terminator underscore
+        NSString *inner = [body substringFromIndex:1];
+        
+        // Parse base type
+        NSString *baseParsed = nil;
+        NSUInteger baseConsumed = 0;
+        [self parseLegacyTypeComponent:inner result:&baseParsed consumed:&baseConsumed];
+        
+        if (!baseParsed || baseConsumed == 0) {
+            *outResult = nil;
+            *outConsumed = 0;
+            return;
+        }
+        
+        NSString *afterBase = [inner substringFromIndex:baseConsumed];
+        NSMutableArray<NSString *> *nestedParams = [NSMutableArray array];
+        NSUInteger totalParamConsumed = 0;
+        
+        while (afterBase.length > 0 && [afterBase characterAtIndex:0] != '_') {
+            NSString *paramParsed = nil;
+            NSUInteger paramConsumed = 0;
+            [self parseLegacyTypeComponent:afterBase result:&paramParsed consumed:&paramConsumed];
+            if (paramParsed && paramConsumed > 0) {
+                [nestedParams addObject:paramParsed];
+                totalParamConsumed += paramConsumed;
+                afterBase = [afterBase substringFromIndex:paramConsumed];
+            } else {
+                break;
+            }
+        }
+        
+        // Skip trailing underscore terminator
+        NSUInteger terminatorLen = (afterBase.length > 0 && [afterBase characterAtIndex:0] == '_') ? 1 : 0;
+        
+        if (nestedParams.count > 0) {
+            NSString *paramsStr = [nestedParams componentsJoinedByString:@", "];
+            *outResult = [NSString stringWithFormat:@"%@<%@>", baseParsed, paramsStr];
+        } else {
+            *outResult = baseParsed;
+        }
+        *outConsumed = 1 + baseConsumed + totalParamConsumed + terminatorLen; // G + base + params + _
+        return;
+    }
+    
+    // Simple nominal types: C (class), V (struct), O (enum)
+    if (kind != 'C' && kind != 'V' && kind != 'O' && kind != 'P') {
+        *outResult = nil;
+        *outConsumed = 0;
+        return;
+    }
+    
+    NSString *afterKind = [body substringFromIndex:1];
+    NSScanner *scanner = [NSScanner scannerWithString:afterKind];
+    
+    // Parse module: <length><name>
+    NSInteger moduleLength;
+    if (![scanner scanInteger:&moduleLength] || moduleLength <= 0 || moduleLength > 200) {
+        *outResult = nil;
+        *outConsumed = 0;
+        return;
+    }
+    NSUInteger moduleLenDigits = scanner.scanLocation;
+    if (scanner.scanLocation + moduleLength > afterKind.length) {
+        *outResult = nil;
+        *outConsumed = 0;
+        return;
+    }
+    NSString *moduleName = [afterKind substringWithRange:NSMakeRange(scanner.scanLocation, moduleLength)];
+    scanner.scanLocation += moduleLength;
+    
+    // Parse type name: <length><name>
+    NSInteger typeLength;
+    if (![scanner scanInteger:&typeLength] || typeLength <= 0 || typeLength > 200) {
+        *outResult = moduleName;
+        *outConsumed = 1 + moduleLenDigits + moduleLength; // kind + digits + module
+        return;
+    }
+    NSUInteger typeLenDigits = scanner.scanLocation - (moduleLenDigits + moduleLength);
+    if (scanner.scanLocation + typeLength > afterKind.length) {
+        *outResult = moduleName;
+        *outConsumed = 1 + moduleLenDigits + moduleLength;
+        return;
+    }
+    NSString *typeName = [afterKind substringWithRange:NSMakeRange(scanner.scanLocation, typeLength)];
+    
+    *outResult = [NSString stringWithFormat:@"%@.%@", moduleName, typeName];
+    *outConsumed = 1 + moduleLenDigits + moduleLength + typeLenDigits + typeLength; // kind + digits + module + digits + type
+}
+
+/// Parse a legacy nested class: _TtCC<moduleLen><module><outerLen><outer><innerLen><inner>
+/// Returns "Module.OuterType.InnerType" or nil.
++ (nullable NSString *)demangleLegacyNestedClass:(NSString *)mangledName {
+    if (![mangledName hasPrefix:@"_TtCC"] || mangledName.length < 8) {
+        return nil;
+    }
+    
+    // Skip "_TtCC" (5 chars) — the second C is the kind of the outer class
+    NSString *body = [mangledName substringFromIndex:5];
+    NSScanner *scanner = [NSScanner scannerWithString:body];
+    
+    // Parse module: <length><name>
+    NSInteger moduleLength;
+    if (![scanner scanInteger:&moduleLength] || moduleLength <= 0 || moduleLength > 200) {
+        return nil;
+    }
+    if (scanner.scanLocation + moduleLength > body.length) return nil;
+    NSString *moduleName = [body substringWithRange:NSMakeRange(scanner.scanLocation, moduleLength)];
+    scanner.scanLocation += moduleLength;
+    
+    // Parse outer type: <length><name>
+    NSInteger outerLength;
+    if (![scanner scanInteger:&outerLength] || outerLength <= 0 || outerLength > 200) {
+        return [NSString stringWithFormat:@"%@", moduleName];
+    }
+    if (scanner.scanLocation + outerLength > body.length) {
+        return [NSString stringWithFormat:@"%@", moduleName];
+    }
+    NSString *outerName = [body substringWithRange:NSMakeRange(scanner.scanLocation, outerLength)];
+    scanner.scanLocation += outerLength;
+    
+    // Parse inner type: <length><name>
+    NSInteger innerLength;
+    if (![scanner scanInteger:&innerLength] || innerLength <= 0 || innerLength > 200) {
+        return [NSString stringWithFormat:@"%@.%@", moduleName, outerName];
+    }
+    if (scanner.scanLocation + innerLength > body.length) {
+        return [NSString stringWithFormat:@"%@.%@", moduleName, outerName];
+    }
+    NSString *innerName = [body substringWithRange:NSMakeRange(scanner.scanLocation, innerLength)];
+    
+    return [NSString stringWithFormat:@"%@.%@.%@", moduleName, outerName, innerName];
 }
 
 + (nullable NSString *)demangleObjCStyleSwiftClass:(NSString *)mangledName {

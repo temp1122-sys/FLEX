@@ -16,6 +16,7 @@
 #import "FLEXObjectListViewController.h"
 #import "FLEXTableView.h"
 #import "FLEXUtility.h"
+#import "FLEXSwiftNameDemangler.h"
 #import "NSArray+FLEX.h"
 #import "NSString+FLEX.h"
 
@@ -602,7 +603,12 @@ FLEXObjectExplorerDefaultsImpl
     
     FLEXStaticMetadata_Class *metadata = [self new];
     metadata.metadata = cls;
-    metadata->_name = NSStringFromClass(cls);
+    NSString *name = NSStringFromClass(cls);
+    if ([FLEXSwiftNameDemangler isMangledSwiftName:name]) {
+        NSString *demangled = [FLEXSwiftNameDemangler demangleSwiftName:name];
+        if (demangled) name = demangled;
+    }
+    metadata->_name = name;
     metadata.reuse = kFLEXDefaultCell;
     return metadata;
 }

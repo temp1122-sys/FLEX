@@ -18,6 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @interface FLEXMultiRowSection : FLEXTableViewSection
 
+@property (nonatomic, copy, readonly, nullable) NSString *reuseIdentifier;
+
 /// The row configuration block
 typedef void (^FLEXMultiRowConfigureBlock)(UITableViewCell *cell, NSString *title, id value, NSUInteger index);
 
@@ -35,6 +37,14 @@ typedef void (^FLEXMultiRowConfigureBlock)(UITableViewCell *cell, NSString *titl
  * @return A new multi-row section instance
  */
 + (instancetype)sectionWithTitle:(NSString *)title reuseIdentifier:(NSString *)reuseIdentifier;
+
+/**
+ * Initializes a multi-row section with a title and cell reuse identifier
+ * @param title The section title
+ * @param reuseIdentifier The cell reuse identifier
+ * @return A new multi-row section instance
+ */
+- (instancetype)initWithTitle:(NSString *)title reuseIdentifier:(NSString *)reuseIdentifier;
 
 #pragma mark - Row Management
 

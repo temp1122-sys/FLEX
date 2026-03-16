@@ -9,6 +9,7 @@
 #import "FLEXObjectExplorerViewController.h"
 #import "FLEXUtility.h"
 #import "FLEXRuntimeUtility.h"
+#import "FLEXSwiftNameDemangler.h"
 #import "UIBarButtonItem+FLEX.h"
 #import "FLEXMultilineTableViewCell.h"
 #import "FLEXObjectExplorerFactory.h"
@@ -92,7 +93,12 @@
 
     // Use [object class] here rather than object_getClass
     // to avoid the KVO prefix for observed objects
-    self.title = [FLEXRuntimeUtility safeClassNameForObject:self.object];
+    NSString *className = [FLEXRuntimeUtility safeClassNameForObject:self.object];
+    if ([FLEXSwiftNameDemangler isMangledSwiftName:className]) {
+        NSString *demangled = [FLEXSwiftNameDemangler demangleSwiftName:className];
+        if (demangled) className = demangled;
+    }
+    self.title = className;
 
     // Search
     self.showsSearchBar = YES;
@@ -102,7 +108,12 @@
     // Carousel scope bar
     [self.explorer reloadClassHierarchy];
     self.carousel.items = [self.explorer.classHierarchyClasses flex_mapped:^id(Class cls, NSUInteger idx) {
-        return NSStringFromClass(cls);
+        NSString *name = NSStringFromClass(cls);
+        if ([FLEXSwiftNameDemangler isMangledSwiftName:name]) {
+            NSString *demangled = [FLEXSwiftNameDemangler demangleSwiftName:name];
+            if (demangled) return demangled;
+        }
+        return name;
     }];
     
     // ... button for extra options

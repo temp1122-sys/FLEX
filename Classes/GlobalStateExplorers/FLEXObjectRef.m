@@ -8,6 +8,7 @@
 
 #import "FLEXObjectRef.h"
 #import "FLEXRuntimeUtility.h"
+#import "FLEXSwiftNameDemangler.h"
 #import "NSArray+FLEX.h"
 
 @interface FLEXObjectRef () {
@@ -74,6 +75,10 @@
         }
 
         NSString *class = [FLEXRuntimeUtility safeClassNameForObject:object];
+        if ([FLEXSwiftNameDemangler isMangledSwiftName:class]) {
+            NSString *demangled = [FLEXSwiftNameDemangler demangleSwiftName:class];
+            if (demangled) class = demangled;
+        }
         if (ivar) {
             _reference = [NSString stringWithFormat:@"%@ %@", class, ivar];
         } else if (showSummary) {

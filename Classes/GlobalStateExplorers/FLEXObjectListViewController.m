@@ -14,6 +14,7 @@
 #import "FLEXUtility.h"
 #import "FLEXHeapEnumerator.h"
 #import "FLEXObjectRef.h"
+#import "FLEXSwiftNameDemangler.h"
 #import "NSString+FLEX.h"
 #import "NSObject+FLEX_Reflection.h"
 #import "FLEXTableViewCell.h"
@@ -177,8 +178,10 @@ typedef NS_ENUM(NSUInteger, FLEXObjectReferenceSection) {
         predicates:self.defaultPredicates
         sectionTitles:self.defaultSectionTitles
     ];
+    NSString *rawClassName = [FLEXRuntimeUtility safeClassNameForObject:object];
+    NSString *displayName = [FLEXSwiftNameDemangler demangleSwiftName:rawClassName] ?: rawClassName;
     viewController.title = [NSString stringWithFormat:@"Referencing %@ %p",
-        [FLEXRuntimeUtility safeClassNameForObject:object], object
+        displayName, object
     ];
     return viewController;
 }

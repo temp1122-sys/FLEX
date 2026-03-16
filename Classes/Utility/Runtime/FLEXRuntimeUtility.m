@@ -14,6 +14,7 @@
 #import "FLEXTypeEncodingParser.h"
 #import "FLEXMethod.h"
 #import "FLEXSwiftUISupport.h"
+#import "FLEXSwiftNameDemangler.h"
 
 NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain";
 
@@ -138,10 +139,12 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
 
     if (!description.length) {
         NSString *cls = NSStringFromClass(object_getClass(object));
+        NSString *demangled = [FLEXSwiftNameDemangler demangleSwiftName:cls];
+        NSString *displayCls = demangled ?: cls;
         if (object_isClass(object)) {
-            description = [cls stringByAppendingString:@" class (no description)"];
+            description = [displayCls stringByAppendingString:@" class (no description)"];
         } else {
-            description = [cls stringByAppendingString:@" instance (no description)"];
+            description = [displayCls stringByAppendingString:@" instance (no description)"];
         }
     }
 
@@ -213,7 +216,8 @@ NSString * const FLEXRuntimeUtilityErrorDomain = @"FLEXRuntimeUtilityErrorDomain
         }
         
         // Better fallback to readable type name with memory address
-        NSString *typeName = NSStringFromClass([value class]);
+        NSString *rawTypeName = NSStringFromClass([value class]);
+        NSString *typeName = [FLEXSwiftNameDemangler demangleSwiftName:rawTypeName] ?: rawTypeName;
         NSString *readableName = [FLEXSwiftUISupport readableNameForSwiftUIType:typeName];
         if (readableName) {
             return [NSString stringWithFormat:@"%@ <%p>", readableName, value];

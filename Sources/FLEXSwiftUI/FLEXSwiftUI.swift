@@ -41,13 +41,6 @@ private struct FlexIntrospectionView: UIViewRepresentable {
         view.isUserInteractionEnabled = false
         view.backgroundColor = .clear
         
-        // Register this view for FLEX introspection
-        DispatchQueue.main.async {
-            if let parentView = view.superview {
-                FLEXSwiftUIIntrospectBridge.shared.registerSwiftUIView(parentView)
-            }
-        }
-        
         return view
     }
     

@@ -33,7 +33,6 @@ Pod::Spec.new do |spec|
   spec.source           = { :git => "https://github.com/FLEXTool/FLEX.git", :tag => "#{spec.version}" }
   spec.source_files     = "Classes/**/*.{h,c,m,mm}", "Sources/FLEXSwiftUI/**/*.{swift}"
   spec.exclude_files    = "Classes/Headers/*.{h,c,m,mm}"
-  spec.dependency 'SwiftUIIntrospect', '~> 1.0'
   spec.frameworks       = [ "Foundation", "UIKit", "CoreGraphics", "ImageIO", "QuartzCore", "WebKit", "Security", "SceneKit" ]
   spec.libraries        = [ "z", "sqlite3" ]
   spec.requires_arc     = true

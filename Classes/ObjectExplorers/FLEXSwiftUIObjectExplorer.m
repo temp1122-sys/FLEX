@@ -259,60 +259,6 @@
     
     return section.rowCount > 0 ? section : nil;
 }
-    
-    NSMutableArray<NSString *> *titles = [NSMutableArray array];
-    NSMutableArray<NSString *> *values = [NSMutableArray array];
-    
-    // Readable type name
-    if (self.readableViewName) {
-        [titles addObject:@"SwiftUI Type"];
-        [values addObject:self.readableViewName];
-    }
-    
-    // Full type name
-    NSString *fullTypeName = self.swiftTypeInfo[@"fullTypeName"];
-    if (fullTypeName) {
-        [titles addObject:@"Full Type Name"];
-        [values addObject:fullTypeName];
-    }
-    
-    // Module name
-    NSString *moduleName = self.swiftTypeInfo[@"moduleName"];
-    if (moduleName) {
-        [titles addObject:@"Module"];
-        [values addObject:moduleName];
-    }
-    
-    // Metadata information
-    NSNumber *hasMetadata = self.swiftTypeInfo[@"hasMetadata"];
-    if (hasMetadata) {
-        [titles addObject:@"Has Swift Metadata"];
-        [values addObject:hasMetadata.boolValue ? @"Yes" : @"No"];
-    }
-    
-    // Field count
-    NSNumber *fieldCount = self.swiftTypeInfo[@"fieldCount"];
-    if (fieldCount) {
-        [titles addObject:@"Field Count"];
-        [values addObject:fieldCount.stringValue];
-    }
-    
-    if (titles.count == 0) {
-        return nil;
-    }
-    
-    // For now, create a single row section showing the first item
-    // TODO: Create a proper multi-row section implementation
-    NSString *firstTitle = titles.firstObject;
-    NSString *firstValue = values.firstObject;
-    
-    return [FLEXSingleRowSection title:@"SwiftUI Type Information"
-                                 reuse:kFLEXKeyValueCell
-                                  cell:^(FLEXKeyValueTableViewCell *cell) {
-        cell.titleLabel.text = firstTitle;
-        cell.subtitleLabel.text = firstValue;
-    }];
-}
 
 - (nullable FLEXTableViewSection *)swiftUIHierarchySection {
     if (!self.swiftUIViewHierarchy || self.swiftUIViewHierarchy.count == 0) {
@@ -349,36 +295,6 @@
     }
     
     return section.rowCount > 0 ? section : nil;
-}
-    
-    NSMutableArray<NSString *> *titles = [NSMutableArray array];
-    NSMutableArray<NSDictionary<NSString *, id> *> *objects = [NSMutableArray array];
-    
-    for (NSDictionary<NSString *, id> *viewInfo in self.swiftUIViewHierarchy) {
-        NSString *readableName = viewInfo[@"readableName"] ?: viewInfo[@"type"];
-        NSString *description = viewInfo[@"description"];
-        
-        if (readableName) {
-            [titles addObject:readableName];
-            [objects addObject:viewInfo];
-        }
-    }
-    
-    if (titles.count == 0) {
-        return nil;
-    }
-    
-    // For now, create a single row section showing the first item
-    // TODO: Create a proper multi-row section implementation
-    NSString *firstTitle = titles.firstObject;
-    NSDictionary<NSString *, id> *firstViewInfo = objects.firstObject;
-    
-    return [FLEXSingleRowSection title:@"SwiftUI View Hierarchy"
-                                 reuse:kFLEXKeyValueCell
-                                  cell:^(FLEXKeyValueTableViewCell *cell) {
-        cell.titleLabel.text = firstTitle;
-        cell.subtitleLabel.text = firstViewInfo[@"description"] ?: @"SwiftUI View";
-    }];
 }
 
 - (nullable FLEXTableViewSection *)swiftUIStateSection {
@@ -432,7 +348,7 @@
             NSString *targetType = bindingInfo[@"targetType"];
             
             valueDescription = [NSString stringWithFormat:@"Target: %@ (%@)", 
-                              FLEXPluralString(targetType, @"object"), 
+                              targetType ?: @"unknown", 
                               FLEXDescriptionOfObject(target)];
         } else {
             valueDescription = FLEXDescriptionOfObject(value);
@@ -546,7 +462,7 @@
                 NSString *typeDescription = NSStringFromClass([propertyValue class]);
                 
                 // Create row with property info
-                NSDictionary *propertyRowValue = [NSMutableDictionary dictionary];
+                NSMutableDictionary *propertyRowValue = [NSMutableDictionary dictionary];
                 [propertyRowValue setObject:propertyValue forKey:@"rawValue"];
                 [propertyRowValue setObject:typeDescription forKey:@"description"];
                 [propertyRowValue setObject:typeDescription forKey:@"type"];
@@ -556,45 +472,6 @@
         }
     } @catch (NSException *exception) {
         // If mirror access fails, show basic type info
-        NSString *typeName = NSStringFromClass([self.object class]);
-        [section addRowWithTitle:@"Type" value:typeName];
-    }
-    
-    if (section.rowCount == 0) {
-        [section addRowWithTitle:@"Properties" value:@"No accessible properties found"];
-    }
-    
-    return section.rowCount > 0 ? section : nil;
-}
-    
-    FLEXMultiRowSection *section = [FLEXMultiRowSection sectionWithTitle:@"Enhanced SwiftUI Properties"];
-    
-    // Try to get properties from Swift mirror via bridge
-    @try {
-        id mirrorInfo = [self.swiftUIMirror valueForKey:@"mirroredSubject"];
-        if ([mirrorInfo isKindOfClass:[NSDictionary class]]) {
-            NSDictionary *mirrorDict = (NSDictionary *)mirrorInfo;
-            NSArray<NSString *> *propertyNames = mirrorDict.allKeys;
-            
-            for (NSString *propertyName in propertyNames) {
-                // Skip private properties
-                if ([propertyName hasPrefix:@"_"]) {
-                    continue;
-                }
-                
-                id propertyValue = mirrorDict[propertyName];
-                NSString *typeDescription = NSStringFromClass([propertyValue class]);
-                
-                // Create row with property info
-                NSDictionary<NSString *, id> *propertyDict = [NSMutableDictionary dictionary];
-                [(NSMutableDictionary *)propertyDict setObject:propertyValue forKey:@"rawValue"];
-                [(NSMutableDictionary *)propertyDict setObject:typeDescription forKey:@"description"];
-                
-                [section addRowWithTitle:propertyName value:propertyDict];
-            }
-        }
-    } @catch (NSException *exception) {
-        // If mirror access fails, show at least basic type info
         NSString *typeName = NSStringFromClass([self.object class]);
         [section addRowWithTitle:@"Type" value:typeName];
     }
