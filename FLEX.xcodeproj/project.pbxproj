@@ -102,6 +102,10 @@
 		3A4C95421B5B21410088C3F2 /* FLEXNetworkObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 3A4C94C21B5B21410088C3F2 /* FLEXNetworkObserver.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		3A4C95431B5B21410088C3F2 /* FLEXNetworkObserver.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A4C94C31B5B21410088C3F2 /* FLEXNetworkObserver.m */; };
 		3A4C95471B5B217D0088C3F2 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4C95461B5B217D0088C3F2 /* libz.dylib */; };
+		3D5FF8272E7593370069D6EA /* FLEXNewSystemLogViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 3D5FF8252E7593370069D6EA /* FLEXNewSystemLogViewController.h */; };
+		3D5FF8282E7593370069D6EA /* FLEXNewSystemLogViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3D5FF8262E7593370069D6EA /* FLEXNewSystemLogViewController.m */; };
+		3DC010CB2E755CBA0025BE88 /* FLEXNewLogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3DC010CA2E755CBA0025BE88 /* FLEXNewLogController.m */; };
+		3DC010CD2E755CCF0025BE88 /* FLEXNewLogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 3DC010CC2E755CCD0025BE88 /* FLEXNewLogController.h */; };
 		679F64861BD53B7B00A8C94C /* FLEXCookiesViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 679F64841BD53B7B00A8C94C /* FLEXCookiesViewController.h */; };
 		679F64871BD53B7B00A8C94C /* FLEXCookiesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 679F64851BD53B7B00A8C94C /* FLEXCookiesViewController.m */; };
 		71E1C2132307FBB800F5032A /* FLEXKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = 71E1C20B2307FBB700F5032A /* FLEXKeychain.h */; };
@@ -490,6 +494,10 @@
 		3A4C94C31B5B21410088C3F2 /* FLEXNetworkObserver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FLEXNetworkObserver.m; sourceTree = "<group>"; };
 		3A4C94C41B5B21410088C3F2 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		3A4C95461B5B217D0088C3F2 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		3D5FF8252E7593370069D6EA /* FLEXNewSystemLogViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FLEXNewSystemLogViewController.h; sourceTree = "<group>"; };
+		3D5FF8262E7593370069D6EA /* FLEXNewSystemLogViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FLEXNewSystemLogViewController.m; sourceTree = "<group>"; };
+		3DC010CA2E755CBA0025BE88 /* FLEXNewLogController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FLEXNewLogController.m; sourceTree = "<group>"; };
+		3DC010CC2E755CCD0025BE88 /* FLEXNewLogController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FLEXNewLogController.h; sourceTree = "<group>"; };
 		679F64841BD53B7B00A8C94C /* FLEXCookiesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FLEXCookiesViewController.h; sourceTree = "<group>"; };
 		679F64851BD53B7B00A8C94C /* FLEXCookiesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FLEXCookiesViewController.m; sourceTree = "<group>"; };
 		71E1C20B2307FBB700F5032A /* FLEXKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FLEXKeychain.h; sourceTree = "<group>"; };
@@ -989,6 +997,8 @@
 		3A4C94AD1B5B21410088C3F2 /* SystemLog */ = {
 			isa = PBXGroup;
 			children = (
+				3D5FF8252E7593370069D6EA /* FLEXNewSystemLogViewController.h */,
+				3D5FF8262E7593370069D6EA /* FLEXNewSystemLogViewController.m */,
 				3A4C94AE1B5B21410088C3F2 /* FLEXSystemLogMessage.h */,
 				3A4C94AF1B5B21410088C3F2 /* FLEXSystemLogMessage.m */,
 				3A4C94B01B5B21410088C3F2 /* FLEXSystemLogCell.h */,
@@ -1000,6 +1010,8 @@
 				C33E46AE223B02CD004BD0E6 /* FLEXASLLogController.m */,
 				C34EE30621CB23CC00BD3A7C /* FLEXOSLogController.h */,
 				C34EE30721CB23CC00BD3A7C /* FLEXOSLogController.m */,
+				3DC010CC2E755CCD0025BE88 /* FLEXNewLogController.h */,
+				3DC010CA2E755CBA0025BE88 /* FLEXNewLogController.m */,
 				C34EE30A21CB249E00BD3A7C /* ActivityStreamAPI.h */,
 			);
 			path = SystemLog;
@@ -1580,8 +1592,10 @@
 				3A4C94CD1B5B21410088C3F2 /* FLEXGlobalsEntry.h in Headers */,
 				C3A9423423C3F98E006871A3 /* FHSViewController.h in Headers */,
 				3A4C94E31B5B21410088C3F2 /* FLEXRuntimeUtility.h in Headers */,
+				3D5FF8272E7593370069D6EA /* FLEXNewSystemLogViewController.h in Headers */,
 				C38DF0EA22CFE4370077B4AD /* FLEXTableViewController.h in Headers */,
 				C31D93E823E38E97005517BF /* FLEXBlockDescription.h in Headers */,
+				3DC010CD2E755CCF0025BE88 /* FLEXNewLogController.h in Headers */,
 				C3531BA123E796BD00A184AD /* FLEXManager+Extensibility.h in Headers */,
 				C36FBFCF230F3B98008D95D5 /* FLEXProtocol.h in Headers */,
 				94A515271C4CA2080063292F /* FLEXExplorerToolbarItem.h in Headers */,
@@ -1769,7 +1783,7 @@
 					};
 					3A4C941E1B5B20570088C3F2 = {
 						CreatedOnToolsVersion = 6.4;
-						LastSwiftMigration = 1130;
+						LastSwiftMigration = 1620;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -1931,6 +1945,7 @@
 				3A4C94F81B5B21410088C3F2 /* FLEXArgumentInputNotSupportedView.m in Sources */,
 				3A4C95351B5B21410088C3F2 /* FLEXSystemLogViewController.m in Sources */,
 				C3EF290628EE8BC500B337B6 /* FLEXWindowShortcuts.m in Sources */,
+				3D5FF8282E7593370069D6EA /* FLEXNewSystemLogViewController.m in Sources */,
 				C3DBFD0C26CE2FAF00E0466A /* OSCache.m in Sources */,
 				C383C3C623B6BB81007A321B /* FLEXCodeFontCell.m in Sources */,
 				3A4C95271B5B21410088C3F2 /* FLEXGlobalsViewController.m in Sources */,
@@ -1993,6 +2008,7 @@
 				3A4C950A1B5B21410088C3F2 /* FLEXFieldEditorView.m in Sources */,
 				3A4C95061B5B21410088C3F2 /* FLEXArgumentInputViewFactory.m in Sources */,
 				3A4C95291B5B21410088C3F2 /* FLEXObjectListViewController.m in Sources */,
+				3DC010CB2E755CBA0025BE88 /* FLEXNewLogController.m in Sources */,
 				C397E319240EC98F0091E4EC /* FLEXSQLResult.m in Sources */,
 				C31D93E923E38E97005517BF /* FLEXBlockDescription.m in Sources */,
 				71E1C2182307FBB800F5032A /* FLEXKeychainViewController.m in Sources */,

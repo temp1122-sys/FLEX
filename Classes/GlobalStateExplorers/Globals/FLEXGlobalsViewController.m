@@ -20,6 +20,7 @@
 #import "FLEXGlobalsEntry.h"
 #import "FLEXManager+Private.h"
 #import "FLEXSystemLogViewController.h"
+#import "FLEXNewSystemLogViewController.h"
 #import "FLEXNetworkMITMViewController.h"
 #import "FLEXAddressExplorerCoordinator.h"
 #import "FLEXGlobalsSection.h"
@@ -72,7 +73,7 @@
         case FLEXGlobalsRowBrowseContainer:
             return [FLEXFileBrowserController flex_concreteGlobalsEntry:row];
         case FLEXGlobalsRowSystemLog:
-            return [FLEXSystemLogViewController flex_concreteGlobalsEntry:row];
+            return [FLEXNewSystemLogViewController flex_concreteGlobalsEntry:row];
         case FLEXGlobalsRowNetworkHistory:
             return [FLEXNetworkMITMViewController flex_concreteGlobalsEntry:row];
         case FLEXGlobalsRowKeyWindow:
