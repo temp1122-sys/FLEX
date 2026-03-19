@@ -7,6 +7,7 @@
 
 #import "FHSView.h"
 #import "FLEXUtility.h"
+#import "FLEXSwiftNameDemangler.h"
 #import "NSArray+FLEX.h"
 
 @interface FHSView (Snapshotting)
@@ -14,6 +15,16 @@
 @end
 
 @implementation FHSView
+
+/// Returns a demangled class name if it's a mangled Swift name, otherwise the original.
++ (NSString *)displayNameForClass:(Class)cls {
+    NSString *name = NSStringFromClass(cls);
+    if ([FLEXSwiftNameDemangler isMangledSwiftName:name]) {
+        NSString *demangled = [FLEXSwiftNameDemangler demangleSwiftName:name];
+        if (demangled) return demangled;
+    }
+    return name;
+}
 
 + (instancetype)forView:(UIView *)view isInScrollView:(BOOL)inScrollView {
     return [[self alloc] initWithView:view isInScrollView:inScrollView];
@@ -31,11 +42,11 @@
             _important = YES;
             _title = [NSString stringWithFormat:
                 @"%@ (for %@)",
-                NSStringFromClass([controller class]),
-                NSStringFromClass([view class])
+                [FHSView displayNameForClass:[controller class]],
+                [FHSView displayNameForClass:[view class]]
             ];
         } else {
-            _title = NSStringFromClass([view class]);
+            _title = [FHSView displayNameForClass:[view class]];
         }
     }
 
@@ -70,7 +81,7 @@
     CGRect f = self.frame;
     return [NSString stringWithFormat:
         @"%@ (%.1f, %.1f, %.1f, %.1f)",
-        NSStringFromClass([self.view class]),
+        [FHSView displayNameForClass:[self.view class]],
         f.origin.x, f.origin.y, f.size.width, f.size.height
     ];
 }

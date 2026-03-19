@@ -91,7 +91,15 @@ NS_INLINE CGRect FLEXRectSetHeight(CGRect r, CGFloat height) {
 
 #define FLEXPluralFormatString(count, pluralFormat, singularFormat) [NSString \
     stringWithFormat:(count == 1 ? singularFormat : pluralFormat), @(count)  \
-]
+    ]
+
+/// Returns a string description of an object
+NS_INLINE NSString *FLEXDescriptionOfObject(id object) {
+    if (object == nil) {
+        return @"nil";
+    }
+    return [object description] ?: [NSString stringWithFormat:@"%p", object];
+}
 
 #define flex_dispatch_after(nSeconds, onQueue, block) \
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, \

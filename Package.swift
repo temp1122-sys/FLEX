@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.5
 
 import PackageDescription
 
@@ -8,18 +8,24 @@ enum FLEXBuildOptions {
 }
 
 #if swift(>=5.9)
-let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v12)]
+let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v15)]
 #elseif swift(>=5.7)
-let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v11)]
+let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v15)]
 #else
-let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v10)]
+let platforms: [PackageDescription.SupportedPlatform] = [.iOS(.v15)]
 #endif
 
 let package = Package(
     name: "FLEX",
     platforms: platforms,
     products: [
-        .library(name: "FLEX", targets: ["FLEX"])
+        .library(name: "FLEX", targets: ["FLEX", "FLEXSwiftUI"])
+    ],
+    dependencies: [
+        .package(
+            url: "https://github.com/siteline/swiftui-introspect",
+            from: "1.1.0"
+        )
     ],
     targets: [
         .target(
@@ -35,7 +41,19 @@ let package = Package(
                 "GlobalStateExplorers/SystemLog/LLVM_LICENSE.TXT",
             ],
             publicHeadersPath: "Headers",
+            cSettings: .headerSearchPaths + .warningFlags
+        ),
+        .target(
+            name: "FLEXSwiftUI",
+            dependencies: [
+                "FLEX",
+                .product(name: "SwiftUIIntrospect", package: "swiftui-introspect")
+            ],
+            path: "Sources/FLEXSwiftUI",
             cSettings: .headerSearchPaths + .warningFlags,
+            swiftSettings: [
+                .define("FLEX_SWIFTUI_ENABLED")
+            ],
             linkerSettings: [
                 .linkedFramework("CoreGraphics"),
                 .linkedLibrary("sqlite3"),
@@ -61,7 +79,7 @@ extension Array where Element == CSetting {
     }
 
     /// These are the header search paths needed for FLEX to compile, not
-    /// the headers used by projects linking against FLEX.
+    /// headers used by projects linking against FLEX.
     ///
     /// Do not modify the contents of this property by hand;
     /// Instead, run `bash generate-spm-headers.sh | grep headerSearchPath | pbcopy`

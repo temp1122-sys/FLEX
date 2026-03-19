@@ -21,6 +21,7 @@
 @interface FLEXObjectExplorer : NSObject
 
 + (instancetype)forObject:(id)objectOrClass;
+- (instancetype)initWithObject:(id)objectOrClass;
 
 + (void)configureDefaultsForItems:(NSArray<id<FLEXObjectExplorerItem>> *)items;
 
