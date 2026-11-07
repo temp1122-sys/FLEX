@@ -100,7 +100,7 @@ static UIVisualEffect *FLEXCreateGlassEffect(void) {
         // Selected view box //
         
         if (@available(iOS 26, *)) {
-            UIGlassEffect *descGlassEffect = FLEXCreateGlassEffect();
+            UIVisualEffect *descGlassEffect = FLEXCreateGlassEffect();
             self.descriptionGlassView = [[UIVisualEffectView alloc] initWithEffect:descGlassEffect];
             self.descriptionGlassView.clipsToBounds = YES;
             self.descriptionGlassView.layer.cornerRadius = [[self class] descriptionContainerHeight] / 2.0;
