@@ -13,10 +13,21 @@
 #import "FLEXUtility.h"
 
 // Workaround for Xcode < 26, because I don't like Xcode 26 :)
-#if !__has_include(<UIKit/UIGlassEffect.h>)
-@interface UIGlassEffect : UIVisualEffect @end
-@implementation UIGlassEffect @end
-#endif
+// #if !__has_include(<UIKit/UIGlassEffect.h>)
+// @interface UIGlassEffect : UIVisualEffect @end
+// @implementation UIGlassEffect @end
+// #endif
+
+// Lets see if we can't fix that transparency issue
+static UIVisualEffect *FLEXCreateGlassEffect(void) {
+    Class glassClass = NSClassFromString(@"UIGlassEffect");
+    if (glassClass &&
+        [glassClass isSubclassOfClass:UIVisualEffect.class]) {
+        return [[glassClass alloc] init];
+    }
+    return [UIBlurEffect
+        effectWithStyle:UIBlurEffectStyleSystemMaterial];
+}
 
 @interface FLEXExplorerToolbar ()
 
@@ -48,7 +59,7 @@
     if (self) {
         // Background
         if (@available(iOS 26, *)) {
-            UIGlassEffect *glassEffect = [[UIGlassEffect alloc] init];
+            UIVisualEffect *glassEffect = FLEXCreateGlassEffect();
             self.backgroundGlassView = [[UIVisualEffectView alloc] initWithEffect:glassEffect];
             self.backgroundGlassView.clipsToBounds = YES;
             self.backgroundGlassView.layer.cornerRadius = 16;
@@ -89,7 +100,7 @@
         // Selected view box //
         
         if (@available(iOS 26, *)) {
-            UIGlassEffect *descGlassEffect = [[UIGlassEffect alloc] init];
+            UIGlassEffect *descGlassEffect = FLEXCreateGlassEffect();
             self.descriptionGlassView = [[UIVisualEffectView alloc] initWithEffect:descGlassEffect];
             self.descriptionGlassView.clipsToBounds = YES;
             self.descriptionGlassView.layer.cornerRadius = [[self class] descriptionContainerHeight] / 2.0;
